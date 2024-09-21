@@ -2,7 +2,7 @@
 layout: about
 title: about
 permalink: /
-subtitle: A Learner in Natural Language Processing.
+subtitle: A Learner in Speech and Language Processing.
 # <a href='#'>Affiliations</a>. Address. Contacts. Moto. Etc.
 profile:
   align: right
@@ -17,9 +17,9 @@ selected_papers: true # includes a list of papers marked as "selected={true}"
 social: true  # includes social icons at the bottom of the page
 ---
 
-I am currently working as a Research Assistant at Huawei IT Innovation and Research Center - Cognition Lab and exploring various topics in NLP.
+I am currently a Postgraduate student at University of Edinburgh, the Centre for Speech and Technology Research (CSTR).
 
-I love reading science fictions and antiquity history.
+Besides NLP, I love stargazing and antiquity history.
 
 <!-- Write your biography here. Tell the world about yourself. Link to your favorite [subreddit](http://reddit.com). You can put a picture in, too. The code is already in, just name your picture `prof_pic.jpg` and put it in the `img/` folder.
 
