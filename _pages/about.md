@@ -9,7 +9,7 @@ profile:
   image: prof_pic.jpg
   image_circular: false # crops the image to make it circular
   more_info: >
-    <p>Of course I was not on the cover of NGM，but this photo fits the magazine, isn't it? Thanks ©KX</p>
+    <p>Of course I was not on the cover of NGM，but this photo fits the magazine, isn't it? ©KX</p>
 
 news: true  # includes a list of news items
 latest_posts: false  # includes a list of the newest posts

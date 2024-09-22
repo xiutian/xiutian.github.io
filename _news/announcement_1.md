@@ -5,7 +5,7 @@ inline: true
 related_posts: false
 ---
 
-3 papers are accepted to EMNLP 2023! :sparkles:
+3 papers are accepted to EMNLP 2023! :singapore:
 
 <!--
 Announcements and news can be much longer than just quick inline posts. In fact, they can have all the features available for the standard blog posts. See below.

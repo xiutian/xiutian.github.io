@@ -1,8 +1,8 @@
 ---
 layout: post
-date: 2023-12-05 07:59:00-0400
+date: 2023-12-09 07:59:00-0400
 inline: true
 related_posts: false
 ---
 
-I'm attending EMNLP 2023, see you in Singapore! :singapore:
+[1 paper](https://aclanthology.org/2024.knowllm-1.14/) is accepted to AAAI 2024! :sparkles:
