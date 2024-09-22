@@ -5,4 +5,4 @@ inline: true
 related_posts: false
 ---
 
-2 papers are accepted to EMNLP 2024 Main Conference, and 1 paper to Findings! :sparkles:
+2 papers are accepted to EMNLP 2024 Main Conference, and 1 paper to Findings! :us:

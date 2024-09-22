@@ -5,4 +5,4 @@ inline: true
 related_posts: false
 ---
 
-[1 paper](https://aclanthology.org/2024.knowllm-1.14/) is accepted to AAAI 2024! :sparkles:
+[1 paper](https://ojs.aaai.org/index.php/AAAI/article/view/29883) is accepted to AAAI 2024! :canada:

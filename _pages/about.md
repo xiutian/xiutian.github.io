@@ -19,7 +19,7 @@ social: true  # includes social icons at the bottom of the page
 
 I am currently a Postgraduate student at University of Edinburgh, the Centre for Speech and Technology Research (CSTR).
 
-Besides NLP, I love stargazing and antiquity history.
+Besides NLP, I love <a href="https://xiutian.github.io/gallery/" target="_blank">photo-taking</a>, swimming, stargazing and antiquity history.
 
 <!-- Write your biography here. Tell the world about yourself. Link to your favorite [subreddit](http://reddit.com). You can put a picture in, too. The code is already in, just name your picture `prof_pic.jpg` and put it in the `img/` folder.
 

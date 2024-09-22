@@ -5,4 +5,4 @@ inline: true
 related_posts: false
 ---
 
-[1 paper](https://aclanthology.org/2024.knowllm-1.14/) is accepted to Workshop on Towards Knowledgeable Language Models @ ACL 2024 :thailand:
+[1 paper](https://aclanthology.org/2024.knowllm-1.14/) is accepted to Workshop on Towards Knowledgeable Language Models @ ACL 2024! :thailand:

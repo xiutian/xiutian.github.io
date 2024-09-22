@@ -5,4 +5,4 @@ inline: true
 related_posts: false
 ---
 
-Super excited to join the University of Edinburgh, the Centre for Speech and Technology Research (CSTR) as a postgraduate student! :scotland:
+Super excited to join the Centre for Speech and Technology Research (CSTR) at the University of Edinburgh as a postgraduate student! :scotland:
