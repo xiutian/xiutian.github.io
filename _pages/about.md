@@ -17,7 +17,7 @@ selected_papers: true # includes a list of papers marked as "selected={true}"
 social: true  # includes social icons at the bottom of the page
 ---
 
-I am currently a Postgraduate student at University of Edinburgh, the Centre for Speech and Technology Research (CSTR).
+I am currently a postgraduate student at the University of Edinburgh, the Centre for Speech and Technology Research (CSTR).
 
 Besides NLP, I love <a href="https://xiutian.github.io/gallery/" target="_blank">photo-taking</a>, swimming, stargazing and antiquity history.
 
