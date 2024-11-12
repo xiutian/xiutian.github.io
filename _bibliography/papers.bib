@@ -1,48 +1,70 @@
 ---
 ---
-
-
-@inproceedings{cdm,
-    title = "An Electoral Approach to Diversify LLM-based Multi-Agent Collective Decision-Making",
+@inproceedings{zhao-etal-2024-electoral,
+    title = "An Electoral Approach to Diversify {LLM}-based Multi-Agent Collective Decision-Making",
     author = "Zhao, Xiutian  and
       Wang, Ke  and
       Peng, Wei",
-    booktitle = "Accepted by Proceedings of the 2024 Conference on Empirical Methods in Natural Language Processing (to appear)",
+    editor = "Al-Onaizan, Yaser  and
+      Bansal, Mohit  and
+      Chen, Yun-Nung",
+    booktitle = "Proceedings of the 2024 Conference on Empirical Methods in Natural Language Processing",
     month = nov,
     year = "2024",
-    address = "Miami, Florida, United States",
+    address = "Miami, Florida, USA",
     publisher = "Association for Computational Linguistics",
-    url = "https://openreview.net/forum?id=L5cgN9UKnk",
+    url = "https://aclanthology.org/2024.emnlp-main.158",
+    pages = "2712--2727",
+    abstract = "Modern large language models (LLMs) have exhibited cooperative synergy on complex task-solving, and collective decision-making (CDM) is a pivotal component in LLM-based multi-agent collaboration frameworks. Our survey on 52 recent such systems uncovers a severe lack of diversity, with a heavy reliance on dictatorial and plurality voting for CDM. Through the lens of social choice theory, we scrutinize widely-adopted CDM methods and identify their limitations. To enrich current landscape of LLM-based CDM, we present GEDI, an electoral CDM module that incorporates various ordinal preferential voting mechanisms. Our empirical case study across three benchmarks shows that the integration of certain CDM methods can markedly improve the reasoning capabilities and robustness of some leading LLMs, all without requiring intricate system designs. Additionally, we find that some CDM mechanisms generate positive synergies even with as few as three agents. The voting-based methods also demonstrate robustness against single points of failure, as well as diversity in terms of hit-rate@k and subject-wise impacts.",
 }
 
-@inproceedings{xiong2024watchstepllmagent,
-    title={Watch Every Step! LLM Agent Learning via Iterative Step-Level Process Refinement},
-    author={Weimin Xiong and Yifan Song and Xiutian Zhao and Wenhao Wu and Xun Wang and Ke Wang and Cheng Li and Wei Peng and Sujian Li},
-    booktitle = "Accepted by Proceedings of the 2024 Conference on Empirical Methods in Natural Language Processing (to appear)",
-    month = nov,
-    year = "2024",
-    address = "Miami, Florida, United States",
-    publisher = "Association for Computational Linguistics",
-    url = "https://arxiv.org/abs/2406.11176",
-}
 
-@inproceedings{agentbank,
-    title = "AgentBank: Towards Generalized LLM Agents via Fine-Tuning on 50000+ Interaction Trajectories",
-    author = "Song, Yifan  and
-      Xiong, Weiming  and
+@inproceedings{xiong-etal-2024-watch,
+    title = "Watch Every Step! {LLM} Agent Learning via Iterative Step-level Process Refinement",
+    author = "Xiong, Weimin  and
+      Song, Yifan  and
       Zhao, Xiutian  and
-    Zhu, Dawei and
-    Wu, Wenhao and
-    Wang, Ke and
-    Li, Cheng and
-    Peng, Wei and
-    Li, Sujian",
-    booktitle = "Accepted by Findings of the Association for Computational Linguistics: EMNLP 2024 (to appear)",
+      Wu, Wenhao  and
+      Wang, Xun  and
+      Wang, Ke  and
+      Li, Cheng  and
+      Peng, Wei  and
+      Li, Sujian",
+    editor = "Al-Onaizan, Yaser  and
+      Bansal, Mohit  and
+      Chen, Yun-Nung",
+    booktitle = "Proceedings of the 2024 Conference on Empirical Methods in Natural Language Processing",
     month = nov,
     year = "2024",
-    address = "Miami, Florida, United States",
+    address = "Miami, Florida, USA",
     publisher = "Association for Computational Linguistics",
-    url = "https://openreview.net/forum?id=P8URqRlQD0",
+    url = "https://aclanthology.org/2024.emnlp-main.93",
+    pages = "1556--1572",
+    abstract = "Large language model agents have exhibited exceptional performance across a range of complex interactive tasks. Recent approaches have utilized tuning with expert trajectories to enhance agent performance, yet they primarily concentrate on outcome rewards, which may lead to errors or suboptimal actions due to the absence of process supervision signals. In this paper, we introduce the **I**terative step-level **P**rocess **R**efinement **(IPR)** framework, which provides detailed step-by-step guidance to enhance agent training. Specifically, we adopt the Monte Carlo method to estimate step-level rewards. During each iteration, the agent explores along the expert trajectory and generates new actions. These actions are then evaluated against the corresponding step of expert trajectory using step-level rewards. Such comparison helps identify discrepancies, yielding contrastive action pairs that serve as training data for the agent. Our experiments on three complex agent tasks demonstrate that our framework outperforms a variety of strong baselines. Moreover, our analytical finds highlight the effectiveness of IPR in augmenting action efficiency and its applicability to diverse models.",
+}
+
+@inproceedings{song-etal-2024-agentbank,
+    title = "{A}gent{B}ank: Towards Generalized {LLM} Agents via Fine-Tuning on 50000+ Interaction Trajectories",
+    author = "Song, Yifan  and
+      Xiong, Weimin  and
+      Zhao, Xiutian  and
+      Zhu, Dawei  and
+      Wu, Wenhao  and
+      Wang, Ke  and
+      Li, Cheng  and
+      Peng, Wei  and
+      Li, Sujian",
+    editor = "Al-Onaizan, Yaser  and
+      Bansal, Mohit  and
+      Chen, Yun-Nung",
+    booktitle = "Findings of the Association for Computational Linguistics: EMNLP 2024",
+    month = nov,
+    year = "2024",
+    address = "Miami, Florida, USA",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2024.findings-emnlp.116",
+    pages = "2124--2141",
+    abstract = "Fine-tuning on agent-environment interaction trajectory data holds significant promise for surfacing generalized agent capabilities in open-source large language models (LLMs). In this work, we introduce AgentBank, by far the largest trajectory tuning data collection featuring more than 50k diverse high-quality interaction trajectories which comprises 16 tasks covering five distinct agent skill dimensions. Leveraging a novel annotation pipeline, we are able to scale the annotated trajectories and generate a trajectory dataset with minimized difficulty bias. Furthermore, we fine-tune LLMs on AgentBank to get a series of agent models, Samoyed. Our comparative experiments demonstrate the effectiveness of scaling the interaction trajectory data to acquire generalized agent capabilities. Additional studies also reveal some key observations regarding trajectory tuning and agent skill generalization.",
 }
 
 @inproceedings{zhao-etal-2024-measuring,
