@@ -1,11 +1,12 @@
 ---
 layout: post
-date: 2023-10-08 07:59:00-0400
+date: 2023-12-09 07:59:00-0400
 inline: true
 related_posts: false
 ---
 
-3 papers are accepted to EMNLP 2023! :singapore:
+[1 paper](https://ojs.aaai.org/index.php/AAAI/article/view/29883) is accepted to AAAI 2024! :canada:
+
 
 <!--
 Announcements and news can be much longer than just quick inline posts. In fact, they can have all the features available for the standard blog posts. See below.

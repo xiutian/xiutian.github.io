@@ -1,8 +1,8 @@
 ---
 layout: post
-date: 2023-12-09 07:59:00-0400
+date: 2024-07-02 07:59:00-0400
 inline: true
 related_posts: false
 ---
 
-[1 paper](https://ojs.aaai.org/index.php/AAAI/article/view/29883) is accepted to AAAI 2024! :canada:
+[1 paper](https://aclanthology.org/2024.knowllm-1.14/) is accepted to Workshop on Towards Knowledgeable Language Models @ ACL 2024! :thailand:
