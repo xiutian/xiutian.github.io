@@ -16,11 +16,11 @@ latest_posts: false  # includes a list of the newest posts
 selected_papers: true # includes a list of papers marked as "selected={true}"
 social: true  # includes social icons at the bottom of the page
 ---
-I'm a PhD student in Electrical and Computer Engineering at Johns Hopkins University, affiliated with the [Center for Language and Speech Processing (CLSP)](https://www.clsp.jhu.edu/). I'm fortunate to be advised by [Prof. Berrak Sisman](https://engineering.jhu.edu/faculty/berrak-sisman/) in the [SMILE Lab](https://sites.google.com/view/jhusmile).
+I'm a PhD student in Electrical and Computer Engineering at Johns Hopkins University, affiliated with the [Center for Language and Speech Processing (CLSP)](https://www.clsp.jhu.edu/) and [Data Science and AI Institute (DSAI)](https://ai.jhu.edu/). I'm fortunate to be advised by [Dr. Berrak Sisman](https://engineering.jhu.edu/faculty/berrak-sisman/) in the [SMILE Lab](https://sites.google.com/view/jhusmile).
 
-My research focuses on language and speech processing, especially expressiveness in speech and language models, multimodal modeling, and interpretability. During my master's dissertation at the University of Edinburgh, I worked with Prof. Ivan Titov, Dr. Rochelle Choenni, and Dr. Rohit Saxena.
+My research focuses on language and speech processing, especially expressiveness in audio-language models, multimodal modeling, and interpretability. During my master's dissertation at the University of Edinburgh, I worked with Dr. Ivan Titov, Dr. Rochelle Choenni, and Dr. Rohit Saxena.
 
-Outside research, I'm a cinephile (2,000+ films and counting) and enjoy [photography](https://xiutian.github.io/gallery/), swimming, stargazing, and reading ancient history.
+Outside research, I'm a cinephile (2,000+ films and counting) and enjoy [landsacpe photography](https://xiutian.github.io/gallery/), swimming, stargazing, and reading ancient history.
 
 
 <!-- Besides NLP, I love <a href="https://xiutian.github.io/gallery/" target="_blank">photo-taking</a>, swimming, stargazing and antiquity history. -->
