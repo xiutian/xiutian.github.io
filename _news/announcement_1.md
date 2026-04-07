@@ -1,11 +1,11 @@
 ---
 layout: post
-date: 2024-07-02 07:59:00-0400
+date: 2024-09-20 07:59:00-0400
 inline: true
 related_posts: false
 ---
 
-[1 paper](https://aclanthology.org/2024.knowllm-1.14/) is accepted to Workshop on Towards Knowledgeable Language Models @ ACL 2024! :thailand:
+2 papers are accepted to EMNLP 2024 Main Conference, and 1 paper to Findings! :beach_umbrella:
 
 
 <!--

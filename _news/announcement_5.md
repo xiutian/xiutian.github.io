@@ -5,4 +5,4 @@ inline: true
 related_posts: false
 ---
 
-[1 paper](https://arxiv.org/abs/2510.24942) is accepted to EACL 2026! And I will volunteer for the conferecne, see you there! :morocco:
+[1 paper](https://arxiv.org/abs/2601.03115) is accepted to ACL 2026! See you in San Diego! :dolphin:
