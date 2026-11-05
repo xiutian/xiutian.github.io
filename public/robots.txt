@@ -1,0 +1,4 @@
+User-agent: *
+Disallow:
+
+Sitemap: https://xiutian.github.io/sitemap-index.xml

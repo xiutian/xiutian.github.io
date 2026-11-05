@@ -1,0 +1,177 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PubItem from '../components/PubItem.astro';
+import Icon from '../components/Icon.astro';
+import { getPublications } from '../lib/bibtex';
+
+const pubs = getPublications();
+const years = [...new Set(pubs.map((p) => p.year))].sort((a, b) => b - a);
+const firstCount = pubs.filter((p) => p.firstAuthor).length;
+---
+<BaseLayout title="Publications" description="Publications by Xiutian (Theo) Zhao, in reverse chronological order.">
+  <section class="container page-head">
+    <p class="eyebrow">Research</p>
+    <h1 class="display">Publications</h1>
+    <p class="lede">
+      {pubs.length} papers on speech, language and multimodal models. <strong>Bold</strong> marks me;
+      highlighted venues are first-author work.
+    </p>
+
+    <div class="tools" role="search">
+      <label class="search">
+        <Icon name="search" size={16} />
+        <span class="visually-hidden">Search publications</span>
+        <input type="search" placeholder="Search titles, authors, venues…" data-search-input />
+      </label>
+      <div class="seg" role="group" aria-label="Filter">
+        <button type="button" aria-pressed="true" data-filter="all">All <span>{pubs.length}</span></button>
+        <button type="button" aria-pressed="false" data-filter="first">First-author <span>{firstCount}</span></button>
+      </div>
+    </div>
+  </section>
+
+  <section class="container">
+    {years.map((y) => (
+      <div class="year" data-year>
+        <h2 class="year-label display">{y}</h2>
+        <div class="year-list">
+          {pubs.filter((p) => p.year === y).map((p) => <PubItem pub={p} />)}
+        </div>
+      </div>
+    ))}
+    <p class="empty" hidden data-empty>No publications match that search.</p>
+  </section>
+</BaseLayout>
+
+<script>
+  // Abstract / BibTeX toggles
+  document.querySelectorAll<HTMLButtonElement>('[data-toggle]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const panel = document.getElementById(btn.getAttribute('aria-controls') ?? '');
+      if (!panel) return;
+      const open = btn.getAttribute('aria-expanded') === 'true';
+      btn.setAttribute('aria-expanded', String(!open));
+      panel.hidden = open;
+    });
+  });
+
+  // Copy BibTeX
+  document.querySelectorAll<HTMLButtonElement>('[data-copy]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const code = btn.parentElement?.querySelector('code')?.textContent ?? '';
+      try {
+        await navigator.clipboard.writeText(code);
+        btn.classList.add('done');
+        setTimeout(() => btn.classList.remove('done'), 1600);
+      } catch {}
+    });
+  });
+
+  // Search + first-author filter
+  const input = document.querySelector<HTMLInputElement>('[data-search-input]');
+  const buttons = document.querySelectorAll<HTMLButtonElement>('[data-filter]');
+  const items = document.querySelectorAll<HTMLElement>('[data-pub]');
+  const groups = document.querySelectorAll<HTMLElement>('[data-year]');
+  const empty = document.querySelector<HTMLElement>('[data-empty]');
+  let mode = 'all';
+
+  const apply = () => {
+    const q = (input?.value ?? '').trim().toLowerCase();
+    let shown = 0;
+    items.forEach((el) => {
+      const ok = (mode === 'all' || el.dataset.first === 'true') && (!q || (el.dataset.search ?? '').includes(q));
+      el.hidden = !ok;
+      if (ok) shown++;
+    });
+    groups.forEach((g) => { g.hidden = !g.querySelector('[data-pub]:not([hidden])'); });
+    if (empty) empty.hidden = shown > 0;
+  };
+
+  input?.addEventListener('input', apply);
+  buttons.forEach((b) => b.addEventListener('click', () => {
+    mode = b.dataset.filter ?? 'all';
+    buttons.forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+    apply();
+  }));
+</script>
+
+<style>
+  .page-head { padding-top: clamp(48px, 8vw, 96px); padding-bottom: 24px; }
+  .page-head h1 { font-size: clamp(56px, 10vw, 112px); margin-top: 14px; }
+  .lede { max-width: 56ch; margin: 18px 0 0; font-size: 18px; color: var(--ink-2); }
+  .lede strong { color: var(--ink); }
+
+  .tools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 36px;
+  }
+  .search {
+    flex: 1 1 280px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 16px;
+    height: 46px;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    background: var(--bg-raised);
+    color: var(--muted);
+  }
+  .search:focus-within { border-color: var(--accent); }
+  .search input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    font: inherit;
+    font-size: 15px;
+    color: var(--ink);
+  }
+  .seg {
+    display: inline-flex;
+    padding: 4px;
+    border-radius: 999px;
+    border: 1px solid var(--line-strong);
+    background: var(--bg-raised);
+  }
+  .seg button {
+    border: 0;
+    background: transparent;
+    color: var(--ink-2);
+    font: 500 14px var(--font-sans);
+    padding: 0 14px;
+    height: 36px;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+  .seg button span { font-family: var(--font-mono); font-size: 12px; color: var(--muted); margin-left: 4px; }
+  .seg button[aria-pressed='true'] { background: var(--ink); color: var(--bg); }
+  .seg button[aria-pressed='true'] span { color: color-mix(in oklab, var(--bg) 70%, transparent); }
+
+  .year {
+    display: grid;
+    grid-template-columns: 120px minmax(0, 1fr);
+    gap: 28px;
+    padding-top: 28px;
+    border-top: 1px solid var(--line);
+    margin-top: 28px;
+  }
+  .year-label {
+    font-size: 44px;
+    color: var(--muted);
+    position: sticky;
+    top: 84px;
+    align-self: start;
+    padding-top: 14px;
+  }
+  .year-list { min-width: 0; }
+  .empty { color: var(--muted); padding-top: 32px; }
+
+  @media (max-width: 860px) {
+    .year { grid-template-columns: minmax(0, 1fr); gap: 0; }
+    .year-label { position: static; font-size: 36px; padding-top: 0; }
+  }
+</style>
