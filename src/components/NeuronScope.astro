@@ -1,0 +1,508 @@
+---
+// "Neuron microscope": a toy audio-language model hearing speech clips.
+// A few emotion-sensitive neurons light up for each emotion; visitors can
+// switch a group off (ablation) or amplify it (steering) and watch the
+// model's prediction change. Purely illustrative, not real model data.
+const emotions = [
+  { key: 'happy', label: 'Happy' },
+  { key: 'angry', label: 'Angry' },
+  { key: 'sad', label: 'Sad' },
+  { key: 'neutral', label: 'Neutral' },
+];
+---
+<figure class="scope" data-scope>
+  <div class="scope-top">
+    <span class="scope-label"><span class="live"></span> Inside an audio-language model</span>
+    <span class="scope-clip">Input: <strong data-clip>a happy voice</strong></span>
+  </div>
+
+  <div class="scope-body">
+    <div class="scope-canvas">
+      <canvas aria-hidden="true"></canvas>
+    </div>
+    <aside class="preds" aria-live="off">
+      <p class="scope-label">Model prediction</p>
+      <ol>
+        {emotions.map((e) => (
+          <li data-emo={e.key}>
+            <span class="pl">{e.label}</span>
+            <span class="bar"><i></i></span>
+            <span class="pv">0%</span>
+          </li>
+        ))}
+      </ol>
+    </aside>
+  </div>
+
+  <div class="scope-foot">
+    <div class="seg" role="group" aria-label="What hovering a neuron does">
+      <button type="button" data-mode="off" aria-pressed="true">Switch off</button>
+      <button type="button" data-mode="boost" aria-pressed="false">Amplify</button>
+    </div>
+    <figcaption class="hint" data-hint>Hover a glowing neuron to switch off its emotion group and watch the prediction change.</figcaption>
+    <ul class="legend" aria-hidden="true">
+      {emotions.slice(0, 3).map((e) => <li data-emo={e.key}><i></i>{e.label}</li>)}
+    </ul>
+  </div>
+</figure>
+
+<script>
+  type Emo = 'happy' | 'angry' | 'sad' | 'neutral';
+  type Mod = 'off' | 'boost';
+  const EMOS: Emo[] = ['happy', 'angry', 'sad', 'neutral'];
+  const CLIP_TEXT: Record<Emo, string> = {
+    happy: 'a happy voice', angry: 'an angry voice', sad: 'a sad voice', neutral: 'a neutral voice',
+  };
+  // Emotion-sensitive neurons as [layer, index], for the wide and narrow layouts.
+  const ESN_WIDE: Record<Exclude<Emo, 'neutral'>, [number, number][]> = {
+    happy: [[2, 1], [4, 4], [6, 2]],
+    angry: [[3, 5], [5, 0], [6, 5]],
+    sad: [[3, 2], [5, 3], [7, 4]],
+  };
+  const ESN_NARROW: Record<Exclude<Emo, 'neutral'>, [number, number][]> = {
+    happy: [[1, 1], [3, 3], [4, 0]],
+    angry: [[2, 4], [3, 0], [5, 2]],
+    sad: [[2, 2], [4, 4], [5, 0]],
+  };
+  const CLIP_SECONDS = 5;
+  const SWEEP_SECONDS = 1.5;
+
+  const root = document.querySelector<HTMLElement>('[data-scope]');
+  const canvas = root?.querySelector('canvas');
+  const ctx = canvas?.getContext('2d');
+
+  if (root && canvas && ctx) {
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const clipEl = root.querySelector<HTMLElement>('[data-clip]')!;
+    const hintEl = root.querySelector<HTMLElement>('[data-hint]')!;
+    const rows = EMOS.map((e) => {
+      const li = root.querySelector<HTMLElement>(`.preds li[data-emo="${e}"]`)!;
+      return { e, li, bar: li.querySelector<HTMLElement>('i')!, val: li.querySelector<HTMLElement>('.pv')! };
+    });
+
+    let w = 0, h = 0;
+    let L = 8, N = 7;
+    let esn = ESN_WIDE;
+    let mode: Mod = 'off';
+    let hovered: { l: number; n: number } | null = null;
+    let pinned = false; // touch: tap to keep a neuron selected
+    let colors: Record<string, string> = {};
+    let shown = [0, 0, 0, 1];
+    let raf = 0;
+    let running = !reduce;
+    let start = performance.now();
+
+    const readColors = () => {
+      const cs = getComputedStyle(document.documentElement);
+      const v = (n: string) => cs.getPropertyValue(n).trim();
+      colors = {
+        happy: v('--emo-happy'), angry: v('--emo-angry'), sad: v('--emo-sad'), neutral: v('--emo-neutral'),
+        line: v('--line'), lineStrong: v('--line-strong'), muted: v('--muted'), ink: v('--ink'), bg: v('--bg-raised'),
+      };
+    };
+
+    const esnOf = (l: number, n: number): Exclude<Emo, 'neutral'> | null => {
+      for (const [e, list] of Object.entries(esn) as [Exclude<Emo, 'neutral'>, [number, number][]][]) {
+        if (list.some(([a, b]) => a === l && b === n)) return e;
+      }
+      return null;
+    };
+
+    const hash = (a: number, b: number, c: number) => {
+      const x = Math.sin(a * 127.1 + b * 311.7 + c * 74.7) * 43758.5453;
+      return x - Math.floor(x);
+    };
+
+    // geometry
+    const inputW = () => Math.min(84, w * 0.13);
+    const layerX = (l: number) => {
+      const x0 = inputW() + 34, x1 = w - 16;
+      return x0 + ((x1 - x0) * l) / (L - 1);
+    };
+    const neuronY = (n: number) => {
+      const pad = 22;
+      return pad + ((h - pad * 2) * n) / (N - 1);
+    };
+
+    const resize = () => {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const r = canvas.getBoundingClientRect();
+      w = r.width; h = r.height;
+      canvas.width = Math.round(w * dpr);
+      canvas.height = Math.round(h * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const narrow = w < 520;
+      L = narrow ? 6 : 8;
+      N = narrow ? 5 : 7;
+      esn = narrow ? ESN_NARROW : ESN_WIDE;
+    };
+
+    /** Which emotion group the hovered neuron controls, and how. */
+    const groupMod = (e: Emo): Mod | null => {
+      if (!hovered) return null;
+      return esnOf(hovered.l, hovered.n) === e ? mode : null;
+    };
+
+    const draw = (now: number) => {
+      const t = reduce ? 0 : (now - start) / 1000;
+      const clip = Math.floor(t / CLIP_SECONDS);
+      const emo: Emo = reduce ? 'happy' : EMOS[clip % EMOS.length];
+      const local = t - clip * CLIP_SECONDS;
+      const sweep = reduce ? 1 : Math.min(1, local / SWEEP_SECONDS); // wave front 0..1
+      const fade = reduce ? 1 : Math.min(1, (CLIP_SECONDS - local) / 0.5); // fade before next clip
+      const reach = (l: number) => Math.max(0, Math.min(1, (sweep * (L + 0.6) - l) / 0.8)) * fade;
+
+      if (clipEl.textContent !== CLIP_TEXT[emo]) clipEl.textContent = CLIP_TEXT[emo];
+
+      // activation of a neuron (0..~2)
+      const act = (l: number, n: number) => {
+        const g = esnOf(l, n);
+        const r = reach(l);
+        if (g) {
+          const m = groupMod(g);
+          if (m === 'off') return 0;
+          const base = (emo === g ? 1 : 0.1) * r;
+          return m === 'boost' ? base + 1.6 * Math.max(r, 0.6) : base;
+        }
+        if (hovered && hovered.l === l && hovered.n === n && mode === 'off') return 0;
+        const flicker = reduce ? 0.5 : 0.5 + 0.5 * Math.sin(t * 3 + l * 1.7 + n * 2.3);
+        return (0.12 + 0.4 * hash(l, n, clip)) * r * (0.7 + 0.3 * flicker);
+      };
+
+      ctx.clearRect(0, 0, w, h);
+
+      // input strip: a little spectrogram-like column of bars
+      const iw = inputW();
+      const bars = 14;
+      const bw = iw / bars;
+      for (let i = 0; i < bars; i++) {
+        const k = reduce ? 0.6 : 0.5 + 0.5 * Math.sin(t * 4 + i * 0.9 + clip);
+        const amp = (0.25 + 0.75 * hash(i, clip, 3)) * (0.55 + 0.45 * k) * fade;
+        const bh = Math.max(3, amp * (h - 40));
+        ctx.globalAlpha = 0.35 + 0.5 * amp;
+        ctx.fillStyle = emo === 'neutral' ? colors.muted : colors[emo];
+        ctx.beginPath();
+        ctx.roundRect(i * bw + 1, h / 2 - bh / 2, Math.max(1.5, bw - 2.5), bh, 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+
+      // connections
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = colors.line;
+      ctx.beginPath();
+      for (let n = 0; n < N; n++) { ctx.moveTo(iw + 4, h / 2); ctx.lineTo(layerX(0), neuronY(n)); }
+      for (let l = 0; l < L - 1; l++) {
+        for (let a = 0; a < N; a++) for (let b = 0; b < N; b++) {
+          ctx.moveTo(layerX(l), neuronY(a));
+          ctx.lineTo(layerX(l + 1), neuronY(b));
+        }
+      }
+      ctx.globalAlpha = 0.55;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+
+      // wave front
+      if (!reduce && sweep < 1) {
+        const fx = layerX(0) + (layerX(L - 1) - layerX(0)) * sweep;
+        const g = ctx.createLinearGradient(fx - 60, 0, fx + 10, 0);
+        g.addColorStop(0, 'rgba(0,0,0,0)');
+        g.addColorStop(1, emo === 'neutral' ? colors.muted : colors[emo]);
+        ctx.globalAlpha = 0.12;
+        ctx.fillStyle = g;
+        ctx.fillRect(fx - 60, 0, 70, h);
+        ctx.globalAlpha = 1;
+      }
+
+      // emotion circuits: link each group's neurons
+      for (const [g, list] of Object.entries(esn) as [Exclude<Emo, 'neutral'>, [number, number][]][]) {
+        const strength = Math.max(...list.map(([l, n]) => act(l, n)));
+        const m = groupMod(g);
+        if (strength < 0.05 && m !== 'off') continue;
+        ctx.strokeStyle = colors[g];
+        ctx.lineWidth = m === 'boost' ? 2.4 : 1.6;
+        ctx.globalAlpha = m === 'off' ? 0.25 : Math.min(0.85, strength * 0.7);
+        if (m === 'off') ctx.setLineDash([3, 4]);
+        ctx.beginPath();
+        list.forEach(([l, n], i) => (i ? ctx.lineTo(layerX(l), neuronY(n)) : ctx.moveTo(layerX(l), neuronY(n))));
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.globalAlpha = 1;
+      }
+
+      // neurons
+      for (let l = 0; l < L; l++) {
+        for (let n = 0; n < N; n++) {
+          const x = layerX(l), y = neuronY(n);
+          const g = esnOf(l, n);
+          const a = act(l, n);
+          const m = g ? groupMod(g) : null;
+          const isHover = hovered?.l === l && hovered?.n === n;
+          const off = m === 'off' || (!g && isHover && mode === 'off');
+
+          if (g && !off && a > 0.05) {
+            ctx.shadowColor = colors[g];
+            ctx.shadowBlur = 8 + 14 * Math.min(1.5, a);
+          }
+          const r = g ? 4.5 + 2.5 * Math.min(1.4, a) : 3 + 1.5 * a;
+          ctx.beginPath();
+          ctx.arc(x, y, r, 0, Math.PI * 2);
+          if (off) {
+            ctx.fillStyle = colors.bg;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.strokeStyle = g ? colors[g] : colors.muted;
+            ctx.lineWidth = 1.4;
+            ctx.stroke();
+            // small cross
+            ctx.beginPath();
+            ctx.moveTo(x - 2.2, y - 2.2); ctx.lineTo(x + 2.2, y + 2.2);
+            ctx.moveTo(x + 2.2, y - 2.2); ctx.lineTo(x - 2.2, y + 2.2);
+            ctx.stroke();
+          } else if (g) {
+            ctx.fillStyle = colors[g];
+            ctx.globalAlpha = 0.28 + 0.72 * Math.min(1, a);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+            ctx.shadowBlur = 0;
+            if (m === 'boost') {
+              ctx.beginPath();
+              ctx.arc(x, y, r + 4 + (reduce ? 0 : 1.5 * Math.sin(t * 6)), 0, Math.PI * 2);
+              ctx.strokeStyle = colors[g];
+              ctx.lineWidth = 1.2;
+              ctx.stroke();
+            }
+          } else {
+            ctx.fillStyle = colors.ink;
+            ctx.globalAlpha = 0.16 + 0.6 * Math.min(1, a);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+          }
+          ctx.shadowBlur = 0;
+
+          if (isHover && !off) {
+            ctx.beginPath();
+            ctx.arc(x, y, r + 3, 0, Math.PI * 2);
+            ctx.strokeStyle = colors.ink;
+            ctx.globalAlpha = 0.5;
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+          }
+        }
+      }
+
+      // layer labels
+      ctx.fillStyle = colors.muted;
+      ctx.font = '500 10px "JetBrains Mono Variable", ui-monospace, monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('in', iw / 2, h - 4);
+      for (let l = 0; l < L; l++) ctx.fillText(`L${l + 1}`, layerX(l), h - 4);
+
+      // prediction (softmax over emotion-group evidence; neutral is the baseline)
+      const scores = EMOS.map((e) => {
+        if (e === 'neutral') return 1.6;
+        return esn[e].reduce((s, [l, n]) => s + act(l, n) * 2, 0);
+      });
+      const ex = scores.map((s) => Math.exp(s * 1.3));
+      const sum = ex.reduce((a, b) => a + b, 0);
+      const target = ex.map((v) => v / sum);
+      shown = shown.map((v, i) => (reduce ? target[i] : v + (target[i] - v) * 0.14));
+      const top = shown.indexOf(Math.max(...shown));
+      rows.forEach((row, i) => {
+        row.bar.style.width = `${(shown[i] * 100).toFixed(1)}%`;
+        row.val.textContent = `${Math.round(shown[i] * 100)}%`;
+        row.li.classList.toggle('top', i === top);
+      });
+    };
+
+    const loop = (now: number) => {
+      draw(now);
+      if (running) raf = requestAnimationFrame(loop);
+    };
+    const redraw = () => { if (!running) draw(performance.now()); };
+
+    // interaction
+    const pick = (e: PointerEvent) => {
+      const r = canvas.getBoundingClientRect();
+      const px = e.clientX - r.left, py = e.clientY - r.top;
+      let best: { l: number; n: number } | null = null;
+      let bd = 16 * 16;
+      for (let l = 0; l < L; l++) for (let n = 0; n < N; n++) {
+        const d = (layerX(l) - px) ** 2 + (neuronY(n) - py) ** 2;
+        if (d < bd) { bd = d; best = { l, n }; }
+      }
+      return best;
+    };
+    canvas.addEventListener('pointermove', (e) => {
+      if (e.pointerType !== 'mouse' || pinned) return;
+      hovered = pick(e);
+      canvas.style.cursor = hovered ? 'pointer' : 'default';
+      redraw();
+    });
+    canvas.addEventListener('pointerleave', (e) => {
+      if (e.pointerType !== 'mouse' || pinned) return;
+      hovered = null;
+      redraw();
+    });
+    canvas.addEventListener('pointerdown', (e) => {
+      const p = pick(e);
+      const same = p && hovered && p.l === hovered.l && p.n === hovered.n;
+      if (e.pointerType === 'mouse') {
+        // click pins the effect so it stays while you look at the bars
+        pinned = Boolean(p) && !(pinned && same);
+        hovered = p;
+      } else {
+        pinned = Boolean(p) && !same;
+        hovered = pinned ? p : null;
+      }
+      redraw();
+    });
+
+    root.querySelectorAll<HTMLButtonElement>('[data-mode]').forEach((b) => {
+      b.addEventListener('click', () => {
+        mode = b.dataset.mode as Mod;
+        root.querySelectorAll('[data-mode]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+        setHint();
+        redraw();
+      });
+    });
+
+    function setHint() {
+      const verb = matchMedia('(hover: hover)').matches ? 'Hover' : 'Tap';
+      hintEl.textContent = mode === 'off'
+        ? `${verb} a glowing neuron to switch off its emotion group and watch the prediction change.`
+        : `${verb} an emotion neuron to amplify its group and steer the prediction, whatever the input.`;
+    }
+    setHint();
+
+    readColors();
+    resize();
+    draw(performance.now());
+    if (running) {
+      raf = requestAnimationFrame(loop);
+      new IntersectionObserver(([entry]) => {
+        running = entry.isIntersecting;
+        cancelAnimationFrame(raf);
+        if (running) { raf = requestAnimationFrame(loop); }
+      }).observe(root);
+    }
+    new ResizeObserver(() => { resize(); redraw(); }).observe(canvas);
+    const recolor = () => { readColors(); redraw(); };
+    window.addEventListener('themechange', recolor);
+    matchMedia('(prefers-color-scheme: dark)').addEventListener('change', recolor);
+  }
+</script>
+
+<style>
+  .scope {
+    margin: 0;
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    background: var(--bg-raised);
+    padding: 18px 20px 16px;
+  }
+  .scope [data-emo='happy'] { --c: var(--emo-happy); }
+  .scope [data-emo='angry'] { --c: var(--emo-angry); }
+  .scope [data-emo='sad'] { --c: var(--emo-sad); }
+  .scope [data-emo='neutral'] { --c: var(--emo-neutral); }
+
+  .scope-top {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 8px 16px;
+    margin-bottom: 10px;
+  }
+  .scope-label {
+    margin: 0;
+    font: 500 11.5px var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .live {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--accent);
+    animation: live 1.6s ease-in-out infinite;
+  }
+  @keyframes live { 50% { opacity: 0.3; } }
+  .scope-clip { font: 12.5px var(--font-mono); color: var(--muted); }
+  .scope-clip strong { color: var(--ink); font-weight: 600; }
+
+  .scope-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 210px;
+    gap: 24px;
+    align-items: center;
+  }
+  .scope-canvas { position: relative; height: 250px; }
+  canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: manipulation; }
+
+  .preds ol { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 10px; }
+  .preds li {
+    display: grid;
+    grid-template-columns: 62px 1fr 38px;
+    align-items: center;
+    gap: 10px;
+    font-size: 13.5px;
+    color: var(--muted);
+  }
+  .preds .bar { height: 8px; border-radius: 999px; background: var(--line); overflow: hidden; }
+  .preds .bar i {
+    display: block;
+    height: 100%;
+    width: 0;
+    border-radius: inherit;
+    background: var(--c);
+    opacity: 0.45;
+  }
+  .preds .pv { font: 500 12px var(--font-mono); text-align: right; font-variant-numeric: tabular-nums; }
+  .preds li.top { color: var(--ink); font-weight: 600; }
+  .preds li.top .bar i { opacity: 1; }
+
+  .scope-foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 18px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+  }
+  .seg {
+    display: inline-flex;
+    padding: 3px;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    flex: none;
+  }
+  .seg button {
+    border: 0;
+    background: transparent;
+    color: var(--ink-2);
+    font: 500 13px var(--font-sans);
+    height: 30px;
+    padding: 0 12px;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+  .seg button[aria-pressed='true'] { background: var(--ink); color: var(--bg); }
+  .hint { flex: 1 1 240px; margin: 0; font-size: 13.5px; color: var(--muted); }
+  .legend { display: flex; gap: 12px; list-style: none; margin: 0; padding: 0; font: 12px var(--font-mono); color: var(--muted); }
+  .legend li { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i { width: 8px; height: 8px; border-radius: 50%; background: var(--c); box-shadow: 0 0 8px var(--c); }
+
+  @media (max-width: 760px) {
+    .scope { padding: 14px 14px 12px; }
+    .scope-body { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+    .scope-canvas { height: 210px; }
+    .legend { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .live { animation: none; }
+  }
+</style>

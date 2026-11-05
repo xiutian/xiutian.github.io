@@ -21,6 +21,10 @@
   --accent-soft: color-mix(in oklab, var(--accent) 12%, transparent);
   --wave-a: #d9481f;
   --wave-b: #6b4fd8;
+  --emo-happy: #d99a0b;
+  --emo-angry: #d9481f;
+  --emo-sad: #3f72d6;
+  --emo-neutral: #8a8794;
   --shadow: 0 1px 2px rgb(23 22 27 / 0.06), 0 8px 24px -12px rgb(23 22 27 / 0.18);
 
   --radius: 14px;
@@ -44,6 +48,10 @@
     --accent-ink: #ff936d;
     --wave-a: #ff7a4d;
     --wave-b: #9a85ff;
+    --emo-happy: #f5c04a;
+    --emo-angry: #ff7a4d;
+    --emo-sad: #6f9bff;
+    --emo-neutral: #8f8c9c;
     --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 12px 32px -16px rgb(0 0 0 / 0.7);
     color-scheme: dark;
   }
@@ -61,6 +69,10 @@
   --accent-ink: #ff936d;
   --wave-a: #ff7a4d;
   --wave-b: #9a85ff;
+  --emo-happy: #f5c04a;
+  --emo-angry: #ff7a4d;
+  --emo-sad: #6f9bff;
+  --emo-neutral: #8f8c9c;
   --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 12px 32px -16px rgb(0 0 0 / 0.7);
   color-scheme: dark;
 }

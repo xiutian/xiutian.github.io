@@ -2,7 +2,7 @@
 import { Image } from 'astro:assets';
 import { getCollection, render } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
-import Waveform from '../components/Waveform.astro';
+import NeuronScope from '../components/NeuronScope.astro';
 import PubItem from '../components/PubItem.astro';
 import Icon from '../components/Icon.astro';
 import { Content as Bio } from '../data/bio.md';
@@ -49,7 +49,7 @@ const fmt = new Intl.DateTimeFormat('en', { month: 'short', year: 'numeric', tim
   </section>
 
   <div class="container hero-wave">
-    <Waveform />
+    <NeuronScope />
   </div>
 
   <section class="container about" data-reveal>
