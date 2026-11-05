@@ -46,9 +46,15 @@ const year = new Date().getFullYear();
     <header class="site-header">
       <div class="container bar">
         <a class="brand" href="/" aria-label="Home">
-          <span class="brand-mark" aria-hidden="true">
-            <i></i><i></i><i></i><i></i><i></i>
-          </span>
+          <svg class="brand-mark" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+            <line x1="4" y1="4" x2="20" y2="20" />
+            <line x1="20" y1="4" x2="4" y2="20" />
+            <circle class="n n1" cx="4" cy="4" r="2.6" />
+            <circle class="n n2" cx="20" cy="4" r="2.6" />
+            <circle class="n n3" cx="20" cy="20" r="2.6" />
+            <circle class="n n4" cx="4" cy="20" r="2.6" />
+            <circle class="core" cx="12" cy="12" r="4" />
+          </svg>
           <span class="brand-name">Xiutian Zhao</span>
         </a>
         <nav aria-label="Main">
@@ -162,27 +168,26 @@ const year = new Date().getFullYear();
     letter-spacing: -0.01em;
     margin-right: auto;
   }
-  .brand-mark {
-    display: inline-flex;
-    align-items: center;
-    gap: 2px;
-    height: 20px;
+  /* Neuron X mark: corners light up in turn and the centre pulses on hover */
+  .brand-mark { flex: none; overflow: visible; }
+  .brand-mark line { stroke: var(--line-strong); stroke-width: 1.8; stroke-linecap: round; }
+  .brand-mark .n { fill: var(--muted); transition: fill 0.2s ease; }
+  .brand-mark .core { fill: var(--accent); transform-origin: 12px 12px; }
+  .brand:hover .brand-mark .core,
+  .brand:focus-visible .brand-mark .core { animation: core-pulse 1.6s ease-in-out infinite; }
+  .brand:hover .brand-mark .n,
+  .brand:focus-visible .brand-mark .n { animation: corner-light 1.6s ease-in-out infinite; }
+  .brand-mark .n2 { animation-delay: 0.2s !important; }
+  .brand-mark .n3 { animation-delay: 0.4s !important; }
+  .brand-mark .n4 { animation-delay: 0.6s !important; }
+  @keyframes core-pulse {
+    0%, 100% { transform: scale(1); }
+    15% { transform: scale(1.3); }
+    40% { transform: scale(1); }
   }
-  .brand-mark i {
-    width: 3px;
-    border-radius: 2px;
-    background: linear-gradient(var(--wave-a), var(--wave-b));
-    animation: eq 1.4s ease-in-out infinite;
-  }
-  .brand-mark i:nth-child(1) { height: 40%; animation-delay: -0.2s; }
-  .brand-mark i:nth-child(2) { height: 85%; animation-delay: -0.6s; }
-  .brand-mark i:nth-child(3) { height: 60%; animation-delay: -1s; }
-  .brand-mark i:nth-child(4) { height: 100%; animation-delay: -0.4s; }
-  .brand-mark i:nth-child(5) { height: 45%; animation-delay: -0.8s; }
-  .brand:not(:hover) .brand-mark i { animation-play-state: paused; }
-  @keyframes eq {
-    0%, 100% { transform: scaleY(1); }
-    50% { transform: scaleY(0.45); }
+  @keyframes corner-light {
+    0%, 12%, 60%, 100% { fill: var(--muted); }
+    25%, 45% { fill: var(--accent); }
   }
 
   nav ul {
