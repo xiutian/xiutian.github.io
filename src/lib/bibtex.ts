@@ -37,9 +37,31 @@ const SUPERSCRIPT: Record<string, string> = {
   '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹',
 };
 
+// LaTeX accent commands -> Unicode combining marks.
+const ACCENTS: Record<string, string> = {
+  '"': '̈', "'": '́', '`': '̀', '^': '̂', '~': '̃', '=': '̄',
+  '.': '̇', u: '̆', v: '̌', H: '̋', c: '̧', k: '̨', r: '̊',
+};
+const SPECIAL_LETTERS: Record<string, string> = {
+  ss: 'ß', o: 'ø', O: 'Ø', ae: 'æ', AE: 'Æ', oe: 'œ', OE: 'Œ', aa: 'å', AA: 'Å', l: 'ł', L: 'Ł', i: 'ı', j: 'ȷ',
+};
+
+/** Turn accents like {\"o}, \"{o}, \"o, \c{c} and \ss into real letters (ö, ç, ß). */
+function decodeAccents(input: string): string {
+  return input
+    // symbol accents: \"o  \"{o}  {\"o}  {\"{o}}
+    .replace(/\{?\\(["'`^~=.])\s*\{?\s*(\\[ij]|[A-Za-z])\s*\}?\}?/g, (_, mark: string, ch: string) =>
+      ((ch === '\\i' ? 'ı' : ch === '\\j' ? 'ȷ' : ch) + ACCENTS[mark]).normalize('NFC'))
+    // letter accents need braces or a space: \c{c}  {\v s}  \H{o}
+    .replace(/\{?\\([uvHckr])(?:\{\s*([A-Za-z])\s*\}|\s+([A-Za-z]))\}?/g, (_, mark: string, a?: string, b?: string) =>
+      ((a ?? b ?? '') + ACCENTS[mark]).normalize('NFC'))
+    // special letters: \ss  {\o}  \AE{}
+    .replace(/\{?\\(ss|ae|AE|oe|OE|aa|AA|[oOlLij])(?![A-Za-z])(?:\{\})?\}?/g, (_, name: string) => SPECIAL_LETTERS[name]);
+}
+
 /** Turn a raw BibTeX value into plain readable text. */
 export function cleanLatex(input: string): string {
-  return input
+  return decodeAccents(input)
     .replace(/\$\^\{?(\d+)\}?\$/g, (_, d: string) => [...d].map((c) => SUPERSCRIPT[c] ?? c).join(''))
     .replace(/\{\\%\}|\\%/g, '%')
     .replace(/\\&/g, '&')
@@ -141,7 +163,7 @@ function deriveVenue(f: Record<string, string>): string {
 // Full venue names -> abbreviations. Order matters: the first match wins,
 // so more specific names come before ones they contain.
 const VENUES: [RegExp, string][] = [
-  [/International Joint Conference on Natural Language Processing.*Asia-Pacific Chapter/i, 'IJCNLP-AACL'],
+  [/International Joint Conference on Natural Language Processing.*Asia-Pacific Chapter|Asia-Pacific Chapter.*International Joint Conference on Natural Language Processing|\bIJCNLP-AACL\b|\bAACL-IJCNLP\b/i, 'AACL-IJCNLP'],
   [/Empirical Methods in Natural Language Processing/i, 'EMNLP'],
   [/North American Chapter of the Association for Computational Linguistics/i, 'NAACL'],
   [/European Chapter of the Association for Computational Linguistics/i, 'EACL'],
