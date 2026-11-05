@@ -54,15 +54,10 @@ const year = new Date().getFullYear();
         <nav aria-label="Main">
           <ul>
             {nav.map((item) => {
-              const active = !('external' in item) && (item.href === '/' ? path === '/' : path.startsWith(item.href));
+              const active = item.href === '/' ? path === '/' : path.startsWith(item.href);
               return (
                 <li>
-                  <a
-                    href={item.href}
-                    aria-current={active ? 'page' : undefined}
-                    target={'external' in item ? '_blank' : undefined}
-                    rel={'external' in item ? 'noopener' : undefined}
-                  >{item.label}</a>
+                  <a href={item.href} aria-current={active ? 'page' : undefined}>{item.label}</a>
                 </li>
               );
             })}
@@ -88,7 +83,7 @@ const year = new Date().getFullYear();
         <ul class="foot-links">
           {site.links.map((l) => (
             <li>
-              <a href={l.href} target={l.href.startsWith('http') || l.icon === 'cv' ? '_blank' : undefined} rel="noopener">
+              <a href={l.href} target={l.href.startsWith('http') ? '_blank' : undefined} rel="noopener">
                 <Icon name={l.icon} size={16} /> {l.label}
               </a>
             </li>

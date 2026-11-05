@@ -23,7 +23,6 @@ Pushing to `master` builds the site and publishes it to the `gh-pages` branch (`
 | News | one Markdown file per item in `src/content/news/` with a `date:` |
 | Gallery photos | put the image in `src/assets/gallery/`, then add a line to `src/data/gallery.ts` |
 | Profile photo | `src/assets/prof_pic.jpg` |
-| CV | `public/assets/pdf/xiutian_cv.pdf` |
 | Colors, fonts | tokens at the top of `src/styles/global.css` |
 
 Photos can be full-resolution originals; the build resizes and converts them to WebP.

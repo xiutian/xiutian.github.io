@@ -30,7 +30,6 @@ const fmt = new Intl.DateTimeFormat('en', { month: 'short', year: 'numeric', tim
       </p>
       <div class="hero-cta">
         <a class="btn primary" href="/publications/">Publications <Icon name="arrow" size={16} /></a>
-        <a class="btn" href={site.cv} target="_blank" rel="noopener">CV <Icon name="cv" size={16} /></a>
         <a class="icon-btn" href={`mailto:${site.email}`} aria-label="Email"><Icon name="mail" /></a>
         <a class="icon-btn" href="https://scholar.google.com/citations?user=HfOmKncAAAAJ" target="_blank" rel="noopener" aria-label="Google Scholar"><Icon name="scholar" /></a>
         <a class="icon-btn" href="https://github.com/xiutian" target="_blank" rel="noopener" aria-label="GitHub"><Icon name="github" /></a>
@@ -193,6 +192,16 @@ const fmt = new Intl.DateTimeFormat('en', { month: 'short', year: 'numeric', tim
   .news time { font: 13px/1.9 var(--font-mono); color: var(--muted); }
   .news-body { color: var(--ink-2); }
   .news-body :global(p) { margin: 0; }
+  /* Flags drawn as images: Windows can't display flag emoji. */
+  .news-body :global(img.emoji) {
+    display: inline-block;
+    height: 0.95em;
+    width: auto;
+    vertical-align: -0.1em;
+    margin-inline: 0.1em;
+    border-radius: 2px;
+    box-shadow: 0 0 0 1px var(--line);
+  }
 
   .gallery-teaser {
     position: relative;

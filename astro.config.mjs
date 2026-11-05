@@ -7,8 +7,4 @@ export default defineConfig({
   trailingSlash: 'ignore',
   devToolbar: { enabled: false },
   integrations: [sitemap()],
-  // Keep the old al-folio /cv/ URL working.
-  redirects: {
-    '/cv': '/assets/pdf/xiutian_cv.pdf',
-  },
 });
