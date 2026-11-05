@@ -1,0 +1,144 @@
+---
+import Icon from './Icon.astro';
+import type { Publication } from '../lib/bibtex';
+
+interface Props {
+  pub: Publication;
+  compact?: boolean;
+}
+
+const { pub, compact = false } = Astro.props;
+const link = pub.url ?? pub.arxiv ?? pub.doi;
+const search = [pub.title, pub.venue, pub.venueFull, ...pub.authors.map((a) => a.name)].join(' ').toLowerCase();
+---
+<article
+  class:list={['pub', { compact }]}
+  data-pub
+  data-first={pub.firstAuthor ? 'true' : 'false'}
+  data-search={search}
+>
+  <div class="pub-meta">
+    <span class:list={['badge', { accent: pub.selected || pub.firstAuthor }]}>{pub.venue}</span>
+    {pub.note && <span class="badge">{pub.note}</span>}
+  </div>
+  <div class="pub-body">
+    <h3 class="pub-title">
+      {link ? <a href={link} target="_blank" rel="noopener">{pub.title}</a> : pub.title}
+    </h3>
+    <p class="pub-authors">
+      {pub.authors.map((a, i) => (
+        <>
+          {a.self ? <strong>{a.name}</strong> : <span>{a.name}</span>}
+          {i < pub.authors.length - 1 && ', '}
+        </>
+      ))}
+    </p>
+    {!compact && (
+      <div class="pub-actions">
+        {pub.url && <a class="chip" href={pub.url} target="_blank" rel="noopener">Paper <Icon name="external" size={13} /></a>}
+        {pub.arxiv && pub.arxiv !== pub.url && <a class="chip" href={pub.arxiv} target="_blank" rel="noopener">arXiv <Icon name="external" size={13} /></a>}
+        {pub.doi && <a class="chip" href={pub.doi} target="_blank" rel="noopener">DOI <Icon name="external" size={13} /></a>}
+        {pub.abstract && (
+          <button class="chip" type="button" data-toggle="abstract" aria-expanded="false" aria-controls={`abs-${pub.key}`}>Abstract</button>
+        )}
+        <button class="chip" type="button" data-toggle="bibtex" aria-expanded="false" aria-controls={`bib-${pub.key}`}>BibTeX</button>
+      </div>
+    )}
+    {!compact && pub.abstract && (
+      <div class="pub-panel" id={`abs-${pub.key}`} hidden>
+        <p>{pub.abstract}</p>
+      </div>
+    )}
+    {!compact && (
+      <div class="pub-panel bib" id={`bib-${pub.key}`} hidden>
+        <button class="copy" type="button" data-copy aria-label="Copy BibTeX">
+          <span class="copy-idle"><Icon name="copy" size={15} /> Copy</span>
+          <span class="copy-done"><Icon name="check" size={15} /> Copied</span>
+        </button>
+        <pre><code>{pub.bibtex}</code></pre>
+      </div>
+    )}
+  </div>
+</article>
+
+<style>
+  .pub {
+    display: grid;
+    grid-template-columns: 170px minmax(0, 1fr);
+    gap: 8px 28px;
+    padding-block: 22px;
+    border-bottom: 1px solid var(--line);
+  }
+  .pub:last-child { border-bottom: 0; }
+  .pub-meta { display: flex; flex-wrap: wrap; align-content: flex-start; gap: 6px; padding-top: 3px; }
+  .pub-body { min-width: 0; }
+  .pub-title {
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1.35;
+    letter-spacing: -0.012em;
+    text-wrap: balance;
+  }
+  .pub-title a { text-decoration: none; }
+  .pub-title a:hover { text-decoration: underline; text-decoration-color: var(--accent); }
+  .pub-authors { margin: 6px 0 0; font-size: 15px; color: var(--muted); line-height: 1.5; }
+  .pub-authors strong { color: var(--ink); font-weight: 600; }
+
+  .pub-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font: 500 12.5px/1 var(--font-mono);
+    padding: 7px 11px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--ink-2);
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .chip:hover { border-color: var(--accent); color: var(--accent-ink); }
+  .chip[aria-expanded='true'] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+  .pub-panel {
+    margin-top: 14px;
+    padding: 16px 18px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-raised);
+    border: 1px solid var(--line);
+    font-size: 15px;
+    color: var(--ink-2);
+  }
+  .pub-panel p { margin: 0; }
+  .bib { position: relative; }
+  .bib pre {
+    margin: 0;
+    overflow-x: auto;
+    font: 12.5px/1.6 var(--font-mono);
+    color: var(--ink-2);
+  }
+  .copy {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: inline-flex;
+    font: 500 12px var(--font-mono);
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    background: var(--bg);
+    color: var(--ink-2);
+    cursor: pointer;
+  }
+  .copy span { display: inline-flex; align-items: center; gap: 5px; }
+  .copy-done { display: none !important; }
+  .copy.done .copy-idle { display: none !important; }
+  .copy.done .copy-done { display: inline-flex !important; color: var(--accent-ink); }
+
+  .compact { grid-template-columns: minmax(0, 1fr); gap: 10px; padding-block: 20px; }
+
+  @media (max-width: 720px) {
+    .pub { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  }
+</style>

@@ -1,0 +1,117 @@
+---
+// Animated speech-like waveform for the hero. Purely decorative.
+---
+<div class="wave" aria-hidden="true">
+  <canvas></canvas>
+</div>
+
+<script>
+  const wrap = document.querySelector<HTMLDivElement>('.wave');
+  const canvas = wrap?.querySelector('canvas');
+  const ctx = canvas?.getContext('2d');
+
+  if (wrap && canvas && ctx) {
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let w = 0, h = 0, dpr = 1;
+    let colors = { a: '#d9481f', b: '#6b4fd8', line: '#e2ded4' };
+    let pointer = { x: 0.5, active: 0 };
+    let t = 0;
+    let raf = 0;
+    let visible = true;
+
+    const readColors = () => {
+      const cs = getComputedStyle(document.documentElement);
+      colors = {
+        a: cs.getPropertyValue('--wave-a').trim() || colors.a,
+        b: cs.getPropertyValue('--wave-b').trim() || colors.b,
+        line: cs.getPropertyValue('--line-strong').trim() || colors.line,
+      };
+    };
+
+    const resize = () => {
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const r = wrap.getBoundingClientRect();
+      w = r.width; h = r.height;
+      canvas.width = Math.round(w * dpr);
+      canvas.height = Math.round(h * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+
+    // A "syllable" envelope: bursts of energy like speech, drifting over time.
+    const envelope = (x: number, time: number) => {
+      const s =
+        Math.sin(x * 9 + time * 0.9) * 0.5 +
+        Math.sin(x * 23 - time * 1.7) * 0.3 +
+        Math.sin(x * 4.3 + time * 0.4) * 0.6;
+      const burst = Math.max(0, s) ** 1.6;
+      const edge = Math.sin(Math.PI * x) ** 0.8; // fade at both ends
+      const near = Math.exp(-((x - pointer.x) ** 2) / 0.01) * pointer.active;
+      return edge * (0.18 + burst * 0.55 + near * 0.6);
+    };
+
+    const draw = () => {
+      ctx.clearRect(0, 0, w, h);
+      const mid = h / 2;
+      const gap = w < 560 ? 5 : 6;
+      const barW = Math.max(2, gap - 3);
+      const n = Math.floor(w / gap);
+      const grad = ctx.createLinearGradient(0, 0, w, 0);
+      grad.addColorStop(0, colors.a);
+      grad.addColorStop(1, colors.b);
+
+      // baseline
+      ctx.fillStyle = colors.line;
+      ctx.fillRect(0, mid - 0.5, w, 1);
+
+      ctx.fillStyle = grad;
+      for (let i = 0; i < n; i++) {
+        const x = i / n;
+        const jitter = 0.75 + 0.25 * Math.sin(i * 12.9898 + t * 3.1);
+        const amp = envelope(x, t) * jitter * (h * 0.46);
+        const bh = Math.max(1.5, amp * 2);
+        const px = i * gap + (w - n * gap) / 2;
+        ctx.beginPath();
+        ctx.roundRect(px, mid - bh / 2, barW, bh, barW / 2);
+        ctx.fill();
+      }
+    };
+
+    const loop = () => {
+      t += 0.016;
+      pointer.active += ((wrap.matches(':hover') ? 1 : 0) - pointer.active) * 0.06;
+      draw();
+      if (visible) raf = requestAnimationFrame(loop);
+    };
+
+    readColors();
+    resize();
+    if (reduce) {
+      t = 1.3;
+      draw();
+    } else {
+      raf = requestAnimationFrame(loop);
+      new IntersectionObserver(([e]) => {
+        visible = e.isIntersecting;
+        cancelAnimationFrame(raf);
+        if (visible) raf = requestAnimationFrame(loop);
+      }).observe(wrap);
+    }
+
+    wrap.addEventListener('pointermove', (e) => {
+      const r = wrap.getBoundingClientRect();
+      pointer.x = (e.clientX - r.left) / r.width;
+    });
+    new ResizeObserver(() => { resize(); draw(); }).observe(wrap);
+    window.addEventListener('themechange', () => { readColors(); draw(); });
+    matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { readColors(); draw(); });
+  }
+</script>
+
+<style>
+  .wave {
+    position: relative;
+    width: 100%;
+    height: clamp(90px, 14vw, 150px);
+  }
+  canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+</style>
