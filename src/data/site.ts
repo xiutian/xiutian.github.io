@@ -5,7 +5,7 @@ export const site = {
   title: 'Xiutian (Theo) Zhao',
   role: 'PhD student · ECE · Johns Hopkins University',
   description:
-    'Xiutian (Theo) Zhao is a PhD student at Johns Hopkins University (CLSP) working on actionable mechanistic interpretability of multimodal foundation models: how they represent human-centered concepts such as emotion and speech-based diagnostic information.',
+    'Xiutian (Theo) Zhao is a PhD student at Johns Hopkins University (CLSP) working on utilizable mechanistic interpretability of audio-language models: how they represent human-centered concepts such as emotion and speech-based diagnostic information.',
   email: 'xzhao117@jh.edu',
   // How your name appears in author lists, so it can be highlighted.
   selfNames: ['Xiutian Zhao'],
