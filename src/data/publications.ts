@@ -1,7 +1,12 @@
 // Extra info for entries in papers.bib, keyed by BibTeX key.
-// venue: short label shown on the badge (overrides what's derived from the .bib).
-// selected: shown on the home page.
-// note: small extra tag, e.g. "Oral".
+//
+// Venue badges are shortened automatically from the .bib (e.g. "EMNLP 2024",
+// "EACL 2026", "IJCNLP-AACL 2026 Findings"), so most papers need nothing here.
+//
+// selected: show the paper in "Selected papers" on the home page.
+// venue:    override the badge text when the automatic label is wrong.
+// note:     small extra tag, e.g. "Oral" (picked up automatically when the
+//           booktitle contains "(Oral)" or "(Oral Presentation)").
 export interface PubExtra {
   venue?: string;
   selected?: boolean;
@@ -9,16 +14,8 @@ export interface PubExtra {
 }
 
 export const pubExtras: Record<string, PubExtra> = {
-  'zhao2026discoveringcausallyvalidatingemotionsensitive': { venue: 'ACL 2026', selected: true },
-  'zhao2025findingculturesensitiveneuronsvisionlanguage': { venue: 'EACL 2026', selected: true },
-  'zhao2025unwrapping': { venue: 'ACL 2025 SRW' },
-  'zhao-etal-2024-electoral': { venue: 'EMNLP 2024', selected: true },
-  'xiong-etal-2024-watch': { venue: 'EMNLP 2024' },
-  'song-etal-2024-agentbank': { venue: 'EMNLP 2024 Findings' },
-  'zhao-etal-2024-measuring': { venue: 'KnowLLM @ ACL 2024', note: 'Oral' },
-  'liu2024surveyhallucinationlargevisionlanguage': { venue: 'arXiv 2024' },
-  'Wang_Zhao_Peng_2024': { venue: 'AAAI 2024' },
-  'zhao-etal-2023-orchid': { venue: 'EMNLP 2023', selected: true },
-  'wang-etal-2023-m3seg': { venue: 'EMNLP 2023' },
-  'wang-etal-2023-prose': { venue: 'EMNLP 2023' },
+  'zhao-etal-2026-discovering': { selected: true },
+  'zhao-etal-2026-finding': { selected: true },
+  'zhao-etal-2024-electoral': { selected: true },
+  'zhao-etal-2023-orchid': { selected: true },
 };

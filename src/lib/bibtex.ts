@@ -138,6 +138,77 @@ function deriveVenue(f: Record<string, string>): string {
   return '';
 }
 
+// Full venue names -> abbreviations. Order matters: the first match wins,
+// so more specific names come before ones they contain.
+const VENUES: [RegExp, string][] = [
+  [/International Joint Conference on Natural Language Processing.*Asia-Pacific Chapter/i, 'IJCNLP-AACL'],
+  [/Empirical Methods in Natural Language Processing/i, 'EMNLP'],
+  [/North American Chapter of the Association for Computational Linguistics/i, 'NAACL'],
+  [/European Chapter of the Association for Computational Linguistics/i, 'EACL'],
+  [/Asia-Pacific Chapter of the Association for Computational Linguistics/i, 'AACL'],
+  [/Transactions of the Association for Computational Linguistics/i, 'TACL'],
+  [/Annual Meeting of the Association for Computational Linguistics/i, 'ACL'],
+  [/International Conference on Computational Linguistics|\bCOLING\b/i, 'COLING'],
+  [/Language Resources and Evaluation/i, 'LREC'],
+  [/Conference on Language Modeling/i, 'COLM'],
+  [/AAAI Conference on Artificial Intelligence/i, 'AAAI'],
+  [/International Joint Conference on Artificial Intelligence|\bIJCAI\b/i, 'IJCAI'],
+  [/Neural Information Processing Systems|\bNeurIPS\b/i, 'NeurIPS'],
+  [/International Conference on Learning Representations|\bICLR\b/i, 'ICLR'],
+  [/International Conference on Machine Learning|\bICML\b/i, 'ICML'],
+  [/Acoustics,? Speech,? and Signal Processing|\bICASSP\b/i, 'ICASSP'],
+  [/Transactions on Audio,? Speech,? and Language Processing|\bTASLP\b/i, 'TASLP'],
+  [/\bInterspeech\b/i, 'Interspeech'],
+  [/Spoken Language Technology/i, 'SLT'],
+  [/Automatic Speech Recognition and Understanding/i, 'ASRU'],
+];
+
+const withYear = (label: string, year: number) => (/\b(19|20)\d{2}\b/.test(label) ? label : `${label} ${year}`);
+
+/**
+ * Turn a full venue name into a short badge label, e.g.
+ * "Proceedings of the 2024 Conference on Empirical Methods in NLP" -> "EMNLP 2024".
+ * Returns undefined when it doesn't recognise the venue.
+ */
+export function shortVenue(full: string, year: number): string | undefined {
+  if (!full) return undefined;
+  const text = full.replace(/\((Oral|Spotlight|Poster)( Presentation)?\)/gi, '').trim();
+
+  if (/^arXiv$/i.test(text)) return `arXiv ${year}`;
+
+  // "Findings of the Association for Computational Linguistics: EMNLP 2024"
+  const findings = /^Findings of the Association for Computational Linguistics:?\s*(.*)$/i.exec(text);
+  if (findings) {
+    const rest = findings[1].trim();
+    const abbr = VENUES.find(([re]) => re.test(rest))?.[1] ?? (rest.replace(/\s*\b(19|20)\d{2}\b/, '') || 'ACL');
+    return `${withYear(abbr, year)} Findings`;
+  }
+
+  // Workshops: "Proceedings of the 1st Workshop on ... (KnowLLM 2024) @ ACL 2024"
+  if (/\bWorkshop\b/i.test(text)) {
+    if (/Student Research Workshop/i.test(text)) {
+      const host = VENUES.find(([re]) => re.test(text))?.[1] ?? /\b([A-Z][A-Za-z-]+)\s+(19|20)\d{2}\b/.exec(text)?.[1];
+      return `${withYear(host ?? 'Student Research Workshop', year)}${host ? ' SRW' : ''}`;
+    }
+    const acronym = /\(([A-Za-z][\w-]*?)(?:\s+(?:19|20)\d{2})?\)/.exec(text)?.[1];
+    const host = /@\s*([A-Z][\w-]*)/.exec(text)?.[1] ?? VENUES.find(([re]) => re.test(text))?.[1];
+    if (acronym) return `${acronym}${host ? ` @ ${host}` : ''} ${year}`;
+    if (host) return `${host} ${year} Workshop`;
+  }
+
+  const hit = VENUES.find(([re]) => re.test(text));
+  if (hit) return `${hit[1]} ${year}`;
+
+  // Already short (e.g. someone typed "ACL 2025"): keep it.
+  if (text.length <= 32) return withYear(text, year);
+  return undefined;
+}
+
+/** Pick up "(Oral)" / "(Oral Presentation)" style notes written into the venue. */
+function venueNote(full: string): string | undefined {
+  return /\((Oral|Spotlight|Poster)(?: Presentation)?\)/i.exec(full)?.[1];
+}
+
 export function getPublications(): Publication[] {
   return parseBibtex(bibSource)
     .map((e) => {
@@ -152,9 +223,9 @@ export function getPublications(): Publication[] {
         title: cleanLatex(f.title ?? ''),
         authors,
         year,
-        venue: extra.venue ?? (venueFull ? `${venueFull} ${year}` : String(year)),
+        venue: extra.venue ?? shortVenue(venueFull, year) ?? (venueFull || String(year)),
         venueFull,
-        note: extra.note,
+        note: extra.note ?? venueNote(venueFull),
         selected: Boolean(extra.selected),
         firstAuthor: authors[0]?.self ?? false,
         abstract: f.abstract ? cleanLatex(f.abstract) : undefined,

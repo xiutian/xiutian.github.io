@@ -70,7 +70,8 @@ const search = [pub.title, pub.venue, pub.venueFull, ...pub.authors.map((a) => a
     border-bottom: 1px solid var(--line);
   }
   .pub:last-child { border-bottom: 0; }
-  .pub-meta { display: flex; flex-wrap: wrap; align-content: flex-start; gap: 6px; padding-top: 3px; }
+  .pub-meta { display: flex; flex-wrap: wrap; align-content: flex-start; gap: 6px; padding-top: 3px; min-width: 0; }
+  .pub-meta .badge { white-space: normal; max-width: 100%; line-height: 1.4; }
   .pub-body { min-width: 0; }
   .pub-title {
     font-size: 18px;
