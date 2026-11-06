@@ -19,6 +19,8 @@
   --accent: #2f5bea;
   --accent-ink: #2349c8;
   --accent-soft: color-mix(in oklab, var(--accent) 11%, transparent);
+  --wave-a: #2f5bea;
+  --wave-b: #12a5b8;
   --emo-happy: #d99a0b;
   --emo-angry: #dc4a32;
   --emo-sad: #6a55d8;
@@ -45,6 +47,8 @@
     --line-strong: #2e3746;
     --accent: #7c9cff;
     --accent-ink: #9db4ff;
+    --wave-a: #7c9cff;
+    --wave-b: #3fd6c6;
     --emo-happy: #f5c04a;
     --emo-angry: #ff6b5a;
     --emo-sad: #a594ff;
@@ -65,6 +69,8 @@
   --line-strong: #2e3746;
   --accent: #7c9cff;
   --accent-ink: #9db4ff;
+  --wave-a: #7c9cff;
+  --wave-b: #3fd6c6;
   --emo-happy: #f5c04a;
   --emo-angry: #ff6b5a;
   --emo-sad: #a594ff;

@@ -3,6 +3,7 @@ import { Image } from 'astro:assets';
 import { getCollection, render } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import NeuronScope from '../components/NeuronScope.astro';
+import Waveform from '../components/Waveform.astro';
 import PubItem from '../components/PubItem.astro';
 import Icon from '../components/Icon.astro';
 import { Content as Bio } from '../data/bio.md';
@@ -49,7 +50,7 @@ const fmt = new Intl.DateTimeFormat('en', { month: 'short', year: 'numeric', tim
   </section>
 
   <div class="container hero-wave">
-    <NeuronScope />
+    <Waveform />
   </div>
 
   <section class="container about" data-reveal>
@@ -63,7 +64,11 @@ const fmt = new Intl.DateTimeFormat('en', { month: 'short', year: 'numeric', tim
       <a href="/publications/">All {pubs.length} publications →</a>
     </div>
     <div class="selected">
-      {selected.map((p) => <PubItem pub={p} compact />)}
+      {selected.map((p) => (
+        <PubItem pub={p} compact>
+          {p.visual === 'neuron-scope' && <div class="pub-visual"><NeuronScope /></div>}
+        </PubItem>
+      ))}
     </div>
   </section>
 
@@ -168,6 +173,7 @@ const fmt = new Intl.DateTimeFormat('en', { month: 'short', year: 'numeric', tim
   }
 
   .hero-wave { margin-top: clamp(24px, 5vw, 56px); }
+  .pub-visual { margin-top: 16px; }
 
   .about {
     display: grid;
