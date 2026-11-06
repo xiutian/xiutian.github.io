@@ -1,32 +1,30 @@
 @import '@fontsource-variable/inter';
-@import '@fontsource/instrument-serif/400.css';
-@import '@fontsource/instrument-serif/400-italic.css';
+@import '@fontsource-variable/space-grotesk';
 @import '@fontsource-variable/jetbrains-mono';
 
 /* ---------- Tokens ---------- */
+/* Palette "ink + cobalt": cool neutrals with a cobalt accent. */
 :root {
   --font-sans: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-serif: 'Instrument Serif', 'Iowan Old Style', Georgia, serif;
+  --font-display: 'Space Grotesk Variable', 'Inter Variable', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono Variable', ui-monospace, 'Cascadia Code', monospace;
 
-  --bg: #f5f3ee;
-  --bg-raised: #fbfaf7;
-  --ink: #17161b;
-  --ink-2: #3d3b44;
-  --muted: #6e6b76;
-  --line: #e2ded4;
-  --line-strong: #cfcabd;
-  --accent: #d9481f;
-  --accent-ink: #b33a16;
-  --accent-soft: color-mix(in oklab, var(--accent) 12%, transparent);
-  --wave-a: #d9481f;
-  --wave-b: #6b4fd8;
+  --bg: #f7f8fa;
+  --bg-raised: #ffffff;
+  --ink: #0f1720;
+  --ink-2: #334155;
+  --muted: #5b6472;
+  --line: #e3e7ee;
+  --line-strong: #cdd4df;
+  --accent: #2f5bea;
+  --accent-ink: #2349c8;
+  --accent-soft: color-mix(in oklab, var(--accent) 11%, transparent);
   --emo-happy: #d99a0b;
-  --emo-angry: #d9481f;
-  --emo-sad: #3f72d6;
+  --emo-angry: #dc4a32;
+  --emo-sad: #6a55d8;
   --emo-surprise: #0e9a8c;
-  --emo-neutral: #8a8794;
-  --shadow: 0 1px 2px rgb(23 22 27 / 0.06), 0 8px 24px -12px rgb(23 22 27 / 0.18);
+  --emo-neutral: #8a93a3;
+  --shadow: 0 1px 2px rgb(15 23 32 / 0.06), 0 8px 24px -12px rgb(15 23 32 / 0.18);
 
   --radius: 14px;
   --radius-sm: 8px;
@@ -38,44 +36,40 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --bg: #0d0d11;
-    --bg-raised: #15151b;
-    --ink: #eceaf2;
-    --ink-2: #c4c1cf;
-    --muted: #8f8c9c;
-    --line: #24232c;
-    --line-strong: #34333e;
-    --accent: #ff7a4d;
-    --accent-ink: #ff936d;
-    --wave-a: #ff7a4d;
-    --wave-b: #9a85ff;
+    --bg: #0b0e14;
+    --bg-raised: #121722;
+    --ink: #e6e9ef;
+    --ink-2: #c3c9d4;
+    --muted: #8b94a5;
+    --line: #1f2632;
+    --line-strong: #2e3746;
+    --accent: #7c9cff;
+    --accent-ink: #9db4ff;
     --emo-happy: #f5c04a;
-    --emo-angry: #ff7a4d;
-    --emo-sad: #6f9bff;
+    --emo-angry: #ff6b5a;
+    --emo-sad: #a594ff;
     --emo-surprise: #3fd6c6;
-    --emo-neutral: #8f8c9c;
+    --emo-neutral: #8b94a5;
     --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 12px 32px -16px rgb(0 0 0 / 0.7);
     color-scheme: dark;
   }
 }
 
 :root[data-theme='dark'] {
-  --bg: #0d0d11;
-  --bg-raised: #15151b;
-  --ink: #eceaf2;
-  --ink-2: #c4c1cf;
-  --muted: #8f8c9c;
-  --line: #24232c;
-  --line-strong: #34333e;
-  --accent: #ff7a4d;
-  --accent-ink: #ff936d;
-  --wave-a: #ff7a4d;
-  --wave-b: #9a85ff;
+  --bg: #0b0e14;
+  --bg-raised: #121722;
+  --ink: #e6e9ef;
+  --ink-2: #c3c9d4;
+  --muted: #8b94a5;
+  --line: #1f2632;
+  --line-strong: #2e3746;
+  --accent: #7c9cff;
+  --accent-ink: #9db4ff;
   --emo-happy: #f5c04a;
-  --emo-angry: #ff7a4d;
-  --emo-sad: #6f9bff;
+  --emo-angry: #ff6b5a;
+  --emo-sad: #a594ff;
   --emo-surprise: #3fd6c6;
-  --emo-neutral: #8f8c9c;
+  --emo-neutral: #8b94a5;
   --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 12px 32px -16px rgb(0 0 0 / 0.7);
   color-scheme: dark;
 }
@@ -139,11 +133,13 @@ h1, h2, h3 { line-height: 1.15; margin: 0; font-weight: 600; letter-spacing: -0.
   color: var(--muted);
 }
 
+.display em { font-style: normal; }
+
 .display {
-  font-family: var(--font-serif);
-  font-weight: 400;
-  letter-spacing: -0.02em;
-  line-height: 1.02;
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  line-height: 1;
 }
 
 .section-head {
@@ -156,10 +152,10 @@ h1, h2, h3 { line-height: 1.15; margin: 0; font-weight: 600; letter-spacing: -0.
   border-bottom: 1px solid var(--line);
 }
 .section-head h2 {
-  font-family: var(--font-serif);
-  font-weight: 400;
+  font-family: var(--font-display);
+  font-weight: 500;
   font-size: clamp(28px, 4vw, 40px);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.025em;
 }
 .section-head a {
   font-family: var(--font-mono);
