@@ -3,6 +3,7 @@ import { Image } from 'astro:assets';
 import { getCollection, render } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import NeuronScope from '../components/NeuronScope.astro';
+import Waveform from '../components/Waveform.astro';
 import PubItem from '../components/PubItem.astro';
 import Icon from '../components/Icon.astro';
 import { Content as Bio } from '../data/bio.md';
@@ -49,7 +50,7 @@ const fmt = new Intl.DateTimeFormat('en', { month: 'short', year: 'numeric', tim
   </section>
 
   <div class="container hero-wave">
-    <NeuronScope />
+    <Waveform />
   </div>
 
   <section class="container about" data-reveal>
@@ -63,7 +64,11 @@ const fmt = new Intl.DateTimeFormat('en', { month: 'short', year: 'numeric', tim
       <a href="/publications/">All {pubs.length} publications →</a>
     </div>
     <div class="selected">
-      {selected.map((p) => <PubItem pub={p} compact />)}
+      {selected.map((p) => (
+        <PubItem pub={p} compact>
+          {p.visual === 'neuron-scope' && <div class="pub-visual"><NeuronScope /></div>}
+        </PubItem>
+      ))}
     </div>
   </section>
 
@@ -105,14 +110,16 @@ const fmt = new Intl.DateTimeFormat('en', { month: 'short', year: 'numeric', tim
     box-shadow: 0 0 0 4px var(--accent-soft);
   }
   .hero-name {
-    font-size: clamp(42px, 7vw, 88px);
+    font-size: clamp(38px, 5.6vw, 72px);
     margin-top: 18px;
   }
   .hero-name em {
-    font-style: italic;
+    font-style: normal;
+    font-weight: 400;
     color: var(--muted);
-    font-size: 0.62em;
-    vertical-align: 0.08em;
+    font-size: 0.5em;
+    vertical-align: 0.18em;
+    letter-spacing: -0.02em;
   }
   .hero-lede {
     margin: 26px 0 0;
@@ -123,8 +130,8 @@ const fmt = new Intl.DateTimeFormat('en', { month: 'short', year: 'numeric', tim
     text-wrap: pretty;
   }
   .hero-lede em {
-    font-family: var(--font-serif);
-    font-size: 1.15em;
+    font-style: normal;
+    font-weight: 600;
     color: var(--accent-ink);
   }
   .hero-cta { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 34px; }
@@ -166,6 +173,7 @@ const fmt = new Intl.DateTimeFormat('en', { month: 'short', year: 'numeric', tim
   }
 
   .hero-wave { margin-top: clamp(24px, 5vw, 56px); }
+  .pub-visual { margin-top: 16px; }
 
   .about {
     display: grid;
@@ -213,9 +221,9 @@ const fmt = new Intl.DateTimeFormat('en', { month: 'short', year: 'numeric', tim
     color: #f4f1ff;
     overflow: hidden;
     background:
-      radial-gradient(120% 140% at 0% 0%, #2a1f5c 0%, transparent 55%),
-      radial-gradient(90% 120% at 100% 100%, #ff7a4d 0%, transparent 55%),
-      linear-gradient(120deg, #0d0b1f, #3a2366 55%, #c2502f);
+      radial-gradient(120% 140% at 0% 0%, #1b2a6b 0%, transparent 55%),
+      radial-gradient(90% 120% at 100% 100%, #2fb7c4 0%, transparent 55%),
+      linear-gradient(120deg, #070b1a, #1d3a9e 55%, #2f5bea);
     transition: transform 0.25s ease;
   }
   .gallery-teaser:hover { color: #fff; transform: translateY(-2px); }

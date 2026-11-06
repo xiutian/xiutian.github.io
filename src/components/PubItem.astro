@@ -58,6 +58,7 @@ const search = [pub.title, pub.venue, pub.venueFull, ...pub.authors.map((a) => a
         <pre><code>{pub.bibtex}</code></pre>
       </div>
     )}
+    <slot />
   </div>
 </article>
 

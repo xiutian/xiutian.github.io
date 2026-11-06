@@ -2,7 +2,7 @@
 // values, nested braces, month macros and the LaTeX bits that show up in
 // ACL Anthology / arXiv exports.
 import bibSource from '../data/papers.bib?raw';
-import { pubExtras } from '../data/publications';
+import { pubExtras, type PubExtra } from '../data/publications';
 import { site } from '../data/site';
 
 export interface Author {
@@ -20,6 +20,7 @@ export interface Publication {
   venueFull: string;
   note?: string;
   selected: boolean;
+  visual?: PubExtra["visual"];
   firstAuthor: boolean;
   abstract?: string;
   url?: string;
@@ -249,6 +250,7 @@ export function getPublications(): Publication[] {
         venueFull,
         note: extra.note ?? venueNote(venueFull),
         selected: Boolean(extra.selected),
+        visual: extra.visual,
         firstAuthor: authors[0]?.self ?? false,
         abstract: f.abstract ? cleanLatex(f.abstract) : undefined,
         url: f.url?.trim(),
