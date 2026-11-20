@@ -1,0 +1,201 @@
+---
+// Faces: do the neurons that hear emotion in a voice also see it in a face?
+// (1) overlap of voice- and face-derived neuron sets, (2) cross-wired interventions.
+import { faceEmotions, faceOverlap, faceCross } from '../../data/projects/emotion-neurons';
+
+const data = { emotions: faceEmotions, overlap: faceOverlap, cross: faceCross };
+const models = Object.keys(faceOverlap);
+---
+<div class="fv" data-fv>
+  <div class="w-card part">
+    <div class="part-head">
+      <p class="w-label">1 · Shared neurons</p>
+      <div class="w-seg" role="group" aria-label="Model" data-ov-models>
+        {models.map((m, i) => <button type="button" data-m={m} aria-pressed={i === 1 ? 'true' : 'false'}>{m}</button>)}
+      </div>
+    </div>
+    <div class="ov">
+      <table data-ov>
+        <caption class="visually-hidden">Share of neurons in common between face and voice emotion neurons</caption>
+        <thead>
+          <tr>
+            <th></th>
+            {faceEmotions.map((e) => <th scope="col"><span>{e}</span></th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {faceEmotions.map((rowE, i) => (
+            <tr>
+              <th scope="row">{rowE}</th>
+              {faceEmotions.map((_, j) => <td data-i={i} data-j={j} class:list={{ diag: i === j }}><span></span></td>)}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div class="ov-axes" aria-hidden="true">
+        <span class="w-label">Rows: neurons found from faces · Columns: from voices</span>
+      </div>
+    </div>
+    <p class="w-readout" data-ov-readout aria-live="polite"></p>
+    <p class="w-note">Jaccard overlap of the top 0.5% neurons per emotion. Small numbers are expected from such sparse sets; the point is where they fall.</p>
+  </div>
+
+  <div class="w-card part">
+    <div class="part-head">
+      <p class="w-label">2 · Cross-wire them</p>
+    </div>
+    <div class="w-controls">
+      <div class="w-seg" role="group" aria-label="Direction">
+        <button type="button" data-dir="voiceOnFace" aria-pressed="true">Voice neurons → faces</button>
+        <button type="button" data-dir="faceOnVoice" aria-pressed="false">Face neurons → voices</button>
+      </div>
+      <div class="w-seg" role="group" aria-label="Intervention">
+        <button type="button" data-mode="off" aria-pressed="true">Switch off</button>
+        <button type="button" data-mode="up" aria-pressed="false">Turn up</button>
+      </div>
+    </div>
+
+    <div class="cross" data-cross>
+      {models.map((m) => (
+        <div class="cm" data-cm={m}>
+          <p class="cm-name">{m}</p>
+          {['random', 'target', 'others'].map((k) => (
+            <div class="cbar" data-k={k}>
+              <span class="cl">{k === 'random' ? 'Random neurons' : k === 'target' ? 'Target emotion' : 'Other emotions'}</span>
+              <span class="ctrack"><span class="zero"></span><i></i></span>
+              <output></output>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+    <p class="w-readout" data-cross-readout aria-live="polite"></p>
+    <p class="w-note">Change in recognition accuracy (pts) when neurons found in one modality are changed while the model recognizes the other. Random: same number of random neurons.</p>
+  </div>
+
+  <script type="application/json" data-json set:html={JSON.stringify(data)} />
+</div>
+
+<script>
+  interface Cell { random: number; target: number; others: number }
+  interface Data {
+    emotions: string[];
+    overlap: Record<string, { values: number[][] }>;
+    cross: Record<'voiceOnFace' | 'faceOnVoice', Record<string, { off: Cell; up: Cell }>>;
+  }
+  const OV_MAX = 0.08;
+  const CROSS_MAX = 20;
+  const fmt = (v: number, d = 1) => (v > 0 ? '+' : v < 0 ? '−' : '±') + Math.abs(v).toFixed(d);
+
+  document.querySelectorAll<HTMLElement>('[data-fv]').forEach((root) => {
+    const data: Data = JSON.parse(root.querySelector('[data-json]')!.textContent!);
+    const modelBtns = root.querySelectorAll<HTMLButtonElement>('[data-m]');
+    const dirBtns = root.querySelectorAll<HTMLButtonElement>('[data-dir]');
+    const modeBtns = root.querySelectorAll<HTMLButtonElement>('[data-mode]');
+    let model = modelBtns[1]?.dataset.m ?? Object.keys(data.overlap)[0];
+    let dir: 'voiceOnFace' | 'faceOnVoice' = 'voiceOnFace';
+    let mode: 'off' | 'up' = 'off';
+
+    const renderOverlap = () => {
+      modelBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.m === model)));
+      const vals = data.overlap[model].values;
+      root.querySelectorAll<HTMLElement>('[data-ov] td').forEach((td) => {
+        const v = vals[Number(td.dataset.i)][Number(td.dataset.j)];
+        const pct = Math.round(4 + 88 * Math.min(1, v / OV_MAX));
+        td.style.background = `color-mix(in oklab, var(--accent) ${pct}%, var(--bg-raised))`;
+        td.classList.toggle('strong', pct > 50);
+        td.querySelector('span')!.textContent = v.toFixed(2);
+      });
+      const diag = vals.map((r, i) => r[i]);
+      const off = vals.flatMap((r, i) => r.filter((_, j) => j !== i));
+      const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
+      const best = diag.indexOf(Math.max(...diag));
+      root.querySelector('[data-ov-readout]')!.innerHTML =
+        `Same emotion: <strong>${mean(diag).toFixed(3)}</strong> on average · different emotions: <strong>${mean(off).toFixed(3)}</strong> · strongest match: <strong>${data.emotions[best]}</strong>`;
+    };
+
+    const renderCross = () => {
+      dirBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.dir === dir)));
+      modeBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === mode)));
+      const set = data.cross[dir];
+      root.querySelectorAll<HTMLElement>('[data-cm]').forEach((cm) => {
+        const cell = set[cm.dataset.cm!][mode];
+        cm.querySelectorAll<HTMLElement>('[data-k]').forEach((bar) => {
+          const v = cell[bar.dataset.k as keyof Cell];
+          const w = Math.min(50, (Math.abs(v) / CROSS_MAX) * 50);
+          const i = bar.querySelector<HTMLElement>('i')!;
+          i.style.width = `${w}%`;
+          i.style.left = v < 0 ? `${50 - w}%` : '50%';
+          i.classList.toggle('neg', v < 0);
+          bar.querySelector('output')!.textContent = fmt(v);
+        });
+      });
+      const targets = Object.values(set).map((x) => x[mode].target);
+      const rnd = Object.values(set).map((x) => Math.abs(x[mode].random));
+      const from = dir === 'voiceOnFace' ? 'voices' : 'faces';
+      const to = dir === 'voiceOnFace' ? 'faces' : 'voices';
+      root.querySelector('[data-cross-readout]')!.innerHTML =
+        `${mode === 'off' ? 'Switching off' : 'Turning up'} neurons found from <strong>${from}</strong> moves the matching emotion in <strong>${to}</strong> by ` +
+        `<strong>${fmt(Math.min(...targets.map(Math.abs)) * Math.sign(targets[0]))}</strong> to <strong>${fmt(Math.max(...targets.map(Math.abs)) * Math.sign(targets[0]))}</strong> pts; random neurons stay within ±${Math.max(...rnd).toFixed(1)}.`;
+    };
+
+    modelBtns.forEach((b) => b.addEventListener('click', () => { model = b.dataset.m!; renderOverlap(); }));
+    dirBtns.forEach((b) => b.addEventListener('click', () => { dir = b.dataset.dir as typeof dir; renderCross(); }));
+    modeBtns.forEach((b) => b.addEventListener('click', () => { mode = b.dataset.mode as typeof mode; renderCross(); }));
+    renderOverlap();
+    renderCross();
+  });
+</script>
+
+<style>
+  .fv { display: grid; gap: 16px; }
+  .part { display: grid; gap: 16px; }
+  .part-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; }
+  .part-head .w-label { margin: 0; }
+
+  .ov { max-width: 560px; }
+  table { width: 100%; border-collapse: separate; border-spacing: 4px; table-layout: fixed; font-family: var(--font-mono); }
+  th { font: 500 12.5px var(--font-sans); color: var(--ink-2); }
+  thead th { text-align: center; vertical-align: bottom; padding-bottom: 4px; }
+  thead th:first-child { width: 22%; }
+  tbody th { text-align: right; padding-right: 8px; }
+  td {
+    height: 44px;
+    border-radius: 8px;
+    text-align: center;
+    font-size: 13.5px;
+    color: var(--ink-2);
+    transition: background-color 0.35s ease;
+  }
+  td.strong { color: #fff; }
+  td.diag { box-shadow: inset 0 0 0 1.5px color-mix(in oklab, var(--ink) 55%, transparent); font-weight: 600; color: var(--ink); }
+  td.diag.strong { color: #fff; }
+  .ov-axes { margin-top: 6px; }
+
+  .cross { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+  .cm-name { margin: 0 0 8px; font-weight: 600; font-size: 14.5px; }
+  .cbar { display: grid; grid-template-columns: minmax(0, 1fr) 52px; gap: 4px 8px; align-items: center; margin-bottom: 8px; }
+  .cl { grid-column: 1 / -1; font-size: 12.5px; color: var(--muted); }
+  .ctrack { position: relative; height: 14px; border-radius: 4px; background: var(--bg); border: 1px solid var(--line); }
+  .zero { position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1.5px; background: var(--line-strong); }
+  .ctrack i {
+    position: absolute; top: 2px; bottom: 2px;
+    border-radius: 3px;
+    background: var(--heat-pos);
+    transition: left 0.45s cubic-bezier(0.2, 0.7, 0.2, 1), width 0.45s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  .ctrack i.neg { background: var(--heat-neg); }
+  .cbar[data-k='random'] i { opacity: 0.55; }
+  .cbar[data-k='target'] .cl { color: var(--ink); font-weight: 600; }
+  .cbar output { font: 600 13px var(--font-mono); text-align: right; color: var(--ink); }
+
+  @media (max-width: 720px) {
+    .cross { grid-template-columns: minmax(0, 1fr); }
+  }
+  @media (max-width: 560px) {
+    thead th span { display: inline-block; font-size: 11px; writing-mode: vertical-rl; transform: rotate(180deg); }
+    td { height: 38px; font-size: 12px; }
+    table { border-spacing: 3px; }
+    tbody th { font-size: 11.5px; padding-right: 4px; }
+  }
+</style>

@@ -1,0 +1,316 @@
+---
+// "Emotion knob": play the same sentence converted by Qwen2.5-Omni-7B with
+// a plain instruction, then with emotion neurons steered at growing strength.
+// Meters show the corpus-level trade-off from the EVC paper.
+import { evcSteps, evcClips, evcAlpha, evcBaseWer } from '../../data/projects/emotion-neurons';
+
+const base = '/projects/emotion-neurons/audio';
+const data = { steps: evcSteps, clips: evcClips, alpha: evcAlpha, baseWer: evcBaseWer, base };
+const emoVar: Record<string, string> = { anger: 'var(--emo-angry)' };
+---
+<div class="w-card knobw" data-knobw style={`--emo: ${emoVar.anger}`}>
+  <div class="w-controls">
+    <span class="target"><span class="w-label">Target emotion</span> <b>{evcClips.anger.label}</b></span>
+    <p class="sentence"><span class="w-label">Source text</span> <q data-text></q></p>
+  </div>
+  <p class="instr w-note" data-instr></p>
+
+  <div class="player">
+    <button class="play" type="button" data-play aria-label="Play">
+      <svg class="i-play" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M7 5v14l12-7z" fill="currentColor" /></svg>
+      <svg class="i-pause" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M7 5h4v14H7zM13 5h4v14h-4z" fill="currentColor" /></svg>
+    </button>
+    <div class="wave">
+      <canvas data-wave aria-hidden="true"></canvas>
+      <p class="said"><span class="w-label">Now playing</span> <span data-said-label>Source · neutral</span></p>
+    </div>
+  </div>
+
+  <div class="dial" role="group" aria-label="Setting" data-steps>
+    {evcSteps.map((s) => (
+      <button type="button" data-step={s.id}>
+        <span class="dot"></span>
+        <span class="lbl">{s.label}</span>
+      </button>
+    ))}
+  </div>
+
+  <div class="meters" data-meters>
+    <div class="meter">
+      <div class="m-top"><span class="w-label">Emotion gain</span><output data-gain>—</output></div>
+      <div class="bar"><i data-gain-bar></i></div>
+    </div>
+    <div class="meter">
+      <div class="m-top"><span class="w-label">Word error rate</span><output data-wer>—</output></div>
+      <div class="bar"><i data-wer-bar></i><b class="base" style={`left:${evcBaseWer}%`} title="No steering"></b></div>
+    </div>
+  </div>
+  <p class="w-readout flag" data-flag aria-live="polite"></p>
+  <p class="w-note">Meters: averages over the whole test set for all four target emotions (emotion2vec judge), not this clip. Gain is in points of emotion match, compared with prompting alone. Clips: ESD sentences converted by Qwen2.5-Omni-7B, which changes the speaker's voice on its own.</p>
+
+  <audio preload="none" data-audio></audio>
+  <script type="application/json" data-json set:html={JSON.stringify(data)} />
+</div>
+
+
+<script>
+  interface Step { id: string; label: string; alpha: number | null }
+  interface Data {
+    steps: Step[];
+    clips: Record<string, { label: string; text: string; clip: string; steps: string[] }>;
+    alpha: { alpha: number; gainE2V: number; gainQwen: number; wer: number }[];
+    baseWer: number;
+    base: string;
+  }
+
+  const EMO_VAR: Record<string, string> = { anger: 'var(--emo-angry)' };
+  const BARS = 96;
+
+  document.querySelectorAll<HTMLElement>('[data-knobw]').forEach((root) => {
+    const data: Data = JSON.parse(root.querySelector('[data-json]')!.textContent!);
+    const audio = root.querySelector<HTMLAudioElement>('[data-audio]')!;
+    const canvas = root.querySelector<HTMLCanvasElement>('[data-wave]')!;
+    const playBtn = root.querySelector<HTMLButtonElement>('[data-play]')!;
+    const stepBtns = root.querySelectorAll<HTMLButtonElement>('[data-step]');
+    const emoBtns = root.querySelectorAll<HTMLButtonElement>('[data-emo]');
+    const $ = (s: string) => root.querySelector<HTMLElement>(s)!;
+
+    let emo = 'anger';
+    let step = 'a1.0';
+    const peaksCache = new Map<string, Float32Array>();
+    let peaks: Float32Array | null = null;
+
+    const src = () => `${data.base}/${emo}-${step}.wav`;
+
+    const loadPeaks = async (url: string) => {
+      if (peaksCache.has(url)) return peaksCache.get(url)!;
+      const buf = await (await fetch(url)).arrayBuffer();
+      const ctx = new OfflineAudioContext(1, 1, 24000);
+      const audioBuf = await ctx.decodeAudioData(buf);
+      const ch = audioBuf.getChannelData(0);
+      const out = new Float32Array(BARS);
+      const size = Math.floor(ch.length / BARS);
+      let max = 0;
+      for (let i = 0; i < BARS; i++) {
+        let sum = 0;
+        for (let j = 0; j < size; j++) sum += ch[i * size + j] ** 2;
+        out[i] = Math.sqrt(sum / size);
+        max = Math.max(max, out[i]);
+      }
+      for (let i = 0; i < BARS; i++) out[i] /= max || 1;
+      peaksCache.set(url, out);
+      return out;
+    };
+
+    const draw = () => {
+      const dpr = window.devicePixelRatio || 1;
+      const w = canvas.clientWidth, h = canvas.clientHeight;
+      canvas.width = w * dpr; canvas.height = h * dpr;
+      const g = canvas.getContext('2d')!;
+      g.scale(dpr, dpr);
+      g.clearRect(0, 0, w, h);
+      const cs = getComputedStyle(root);
+      const played = cs.getPropertyValue('--emo-resolved').trim() || cs.color;
+      const rest = getComputedStyle(document.documentElement).getPropertyValue('--line-strong').trim();
+      const progress = audio.duration ? audio.currentTime / audio.duration : 0;
+      const gap = 2, bw = Math.max(1, w / BARS - gap);
+      for (let i = 0; i < BARS; i++) {
+        const v = peaks ? 0.08 + 0.92 * peaks[i] : 0.08;
+        const bh = Math.max(2, v * h);
+        g.fillStyle = i / BARS < progress ? played : rest;
+        g.beginPath();
+        g.roundRect(i * (bw + gap), (h - bh) / 2, bw, bh, bw / 2);
+        g.fill();
+      }
+    };
+
+    const meters = () => {
+      const s = data.steps.find((x) => x.id === step)!;
+      const gainOut = $('[data-gain]'), werOut = $('[data-wer]');
+      const gainBar = $('[data-gain-bar]'), werBar = $('[data-wer-bar]');
+      const flag = $('[data-flag]');
+      root.querySelector('[data-meters]')!.classList.toggle('idle', step === 'source');
+      if (step === 'source') {
+        gainOut.textContent = '—'; werOut.textContent = '—';
+        gainBar.style.width = '0%'; werBar.style.width = '0%';
+        flag.innerHTML = 'This is the input: a neutral recording. Pick a setting to hear the model convert it.';
+        return;
+      }
+      const row = s.alpha == null ? null : data.alpha.find((a) => a.alpha === s.alpha)!;
+      const gain = row ? row.gainE2V : 0;
+      const wer = row ? row.wer : data.baseWer;
+      gainOut.textContent = (gain > 0 ? '+' : '') + gain.toFixed(1) + ' pts';
+      werOut.textContent = wer.toFixed(0) + '%';
+      gainBar.style.width = `${Math.min(100, (gain / 10) * 100)}%`;
+      werBar.style.width = `${Math.min(100, wer)}%`;
+      werBar.classList.toggle('over', wer > 100);
+      flag.classList.toggle('warn', wer > 100);
+      flag.innerHTML = s.alpha == null
+        ? 'Prompting alone: the model is told the emotion but often misses it.'
+        : wer > 100
+          ? '<strong>Too far.</strong> Emotion keeps rising, but the model starts changing the words.'
+          : s.alpha >= 1
+            ? 'Stronger emotion; the words mostly survive.'
+            : 'A gentle push: more emotion, words unchanged.';
+    };
+
+    const select = async (play: boolean) => {
+      const clip = data.clips[emo];
+      root.style.setProperty('--emo', EMO_VAR[emo]);
+      emoBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.emo === emo)));
+      stepBtns.forEach((b) => {
+        const ok = clip.steps.includes(b.dataset.step!);
+        b.disabled = !ok;
+        b.title = ok ? '' : 'No clip for this setting';
+        b.setAttribute('aria-pressed', String(b.dataset.step === step));
+      });
+      $('[data-text]').textContent = clip.text;
+      $('[data-instr]').textContent = `Instruction to the model: “Repeat the utterance word-for-word exactly. Speak with an ${clip.label} emotion.”`;
+      const s = data.steps.find((x) => x.id === step)!;
+      $('[data-said-label]').textContent = step === 'source' ? 'Source · neutral' : s.alpha == null ? 'Prompt only' : `Steered · α ${s.alpha.toFixed(1)}`;
+      meters();
+      audio.src = src();
+      peaks = null;
+      draw();
+      if (play) audio.play().catch(() => {});
+      try { peaks = await loadPeaks(src()); } catch { peaks = null; }
+      draw();
+    };
+
+    emoBtns.forEach((b) => b.addEventListener('click', () => {
+      emo = b.dataset.emo!;
+      if (!data.clips[emo].steps.includes(step)) step = 'a1.0';
+      select(false);
+    }));
+    stepBtns.forEach((b) => b.addEventListener('click', () => { step = b.dataset.step!; select(true); }));
+    playBtn.addEventListener('click', () => (audio.paused ? audio.play().catch(() => {}) : audio.pause()));
+    canvas.addEventListener('click', (e) => {
+      if (!audio.duration) return;
+      const r = canvas.getBoundingClientRect();
+      audio.currentTime = ((e.clientX - r.left) / r.width) * audio.duration;
+    });
+
+    let raf = 0;
+    const tick = () => { draw(); raf = requestAnimationFrame(tick); };
+    audio.addEventListener('play', () => { root.classList.add('playing'); cancelAnimationFrame(raf); tick(); });
+    const stop = () => { root.classList.remove('playing'); cancelAnimationFrame(raf); draw(); };
+    audio.addEventListener('pause', stop);
+    audio.addEventListener('ended', stop);
+    window.addEventListener('resize', draw);
+    window.addEventListener('themechange', draw);
+
+    // Resolve the emotion colour to a concrete value the canvas can use.
+    const resolve = () => {
+      const probe = document.createElement('span');
+      probe.style.color = 'var(--emo)';
+      root.appendChild(probe);
+      root.style.setProperty('--emo-resolved', getComputedStyle(probe).color);
+      probe.remove();
+    };
+    new MutationObserver(resolve).observe(root, { attributes: true, attributeFilter: ['style'] });
+    resolve();
+
+    // Load the first waveform only when the widget scrolls into view.
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) { io.disconnect(); select(false); }
+    });
+    io.observe(root);
+    draw();
+  });
+</script>
+
+<style>
+  .knobw { display: grid; gap: 20px; }
+  .target { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px 5px 10px; border-radius: 999px; background: color-mix(in oklab, var(--emo) 14%, transparent); }
+  .target b { color: var(--emo); font-weight: 600; font-size: 14px; }
+  .sentence { margin: 0; flex: 1 1 240px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; font-size: 17px; color: var(--ink); }
+  .instr { margin-top: -8px; }
+
+  .player { display: flex; align-items: center; gap: 16px; }
+  .play {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 52px;
+    height: 52px;
+    border-radius: 999px;
+    border: 0;
+    background: var(--emo);
+    color: #fff;
+    cursor: pointer;
+    transition: transform 0.15s ease;
+  }
+  .play:hover { transform: scale(1.06); }
+  .i-pause { display: none; }
+  .knobw.playing .i-pause { display: block; }
+  .knobw.playing .i-play { display: none; }
+  .wave { flex: 1; min-width: 0; }
+  canvas { display: block; width: 100%; height: 56px; cursor: pointer; }
+  .said { margin: 6px 0 0; font-size: 14px; color: var(--ink-2); display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+
+  .dial {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 4px;
+  }
+  .dial::before {
+    content: '';
+    position: absolute;
+    left: 10%;
+    right: 10%;
+    top: 13px;
+    height: 2px;
+    background: linear-gradient(90deg, var(--line-strong) 0 30%, var(--emo) 100%);
+    opacity: 0.6;
+  }
+  .dial button {
+    position: relative;
+    display: grid;
+    justify-items: center;
+    gap: 8px;
+    padding: 4px 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    color: var(--ink-2);
+    font: 500 13px var(--font-sans);
+  }
+  .dial .dot {
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    border: 2px solid var(--line-strong);
+    background: var(--bg-raised);
+    transition: all 0.2s ease;
+  }
+  .dial button:hover:not(:disabled) .dot { border-color: var(--emo); }
+  .dial button[aria-pressed='true'] { color: var(--ink); font-weight: 600; }
+  .dial button[aria-pressed='true'] .dot {
+    border-color: var(--emo);
+    background: var(--emo);
+    box-shadow: 0 0 0 5px color-mix(in oklab, var(--emo) 22%, transparent);
+  }
+  .dial button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .dial .lbl { font-family: var(--font-mono); font-size: 12.5px; white-space: nowrap; }
+
+  .meters { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 24px; transition: opacity 0.2s; }
+  .meters.idle { opacity: 0.45; }
+  .m-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+  .m-top output { font: 600 14px var(--font-mono); color: var(--ink); }
+  .bar { position: relative; height: 10px; border-radius: 99px; background: var(--line); overflow: visible; }
+  .bar i { display: block; height: 100%; border-radius: 99px; background: var(--emo); width: 0; transition: width 0.45s cubic-bezier(0.2, 0.7, 0.2, 1); }
+  .bar i.over { background: repeating-linear-gradient(135deg, var(--emo) 0 6px, color-mix(in oklab, var(--emo) 55%, transparent) 6px 12px); }
+  .bar .base { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--ink-2); border-radius: 2px; }
+  .flag.warn { color: var(--emo); }
+  .flag.warn :global(strong) { color: inherit; }
+
+
+  @media (max-width: 560px) {
+    .meters { grid-template-columns: 1fr; }
+    .dial .lbl { font-size: 11px; }
+    .dial .dot { width: 24px; height: 24px; }
+    .dial::before { top: 11px; }
+    .play { width: 46px; height: 46px; }
+  }
+</style>

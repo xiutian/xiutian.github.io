@@ -1,0 +1,73 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Icon from '../../components/Icon.astro';
+import { projects } from '../../data/projects';
+import { esnPanels } from '../../data/projects/emotion-neurons';
+
+// Card preview: the ESN switch-off heatmap (MSP-Podcast, 0.5%) as a tiny grid.
+const preview = esnPanels.find((p) => p.mode === 'off' && p.dataset === 'MSP-Podcast' && p.knob === '0.5%')!;
+const cellBg = (v: number) => {
+  const pct = Math.round(6 + 84 * Math.sqrt(Math.min(1, Math.abs(v) / 18)));
+  return `color-mix(in oklab, ${v < 0 ? 'var(--heat-neg)' : 'var(--heat-pos)'} ${pct}%, var(--bg-raised))`;
+};
+---
+<BaseLayout title="Projects" description="Interactive pages that bring related papers by Xiutian (Theo) Zhao together.">
+  <section class="container page-head">
+    <p class="eyebrow">Research</p>
+    <h1 class="display">Projects</h1>
+    <p class="lede">Lines of work that span several papers, shown as things you can play with instead of PDFs.</p>
+  </section>
+
+  <section class="container grid">
+    {projects.map((p) => (
+      <a class="card" href={`/projects/${p.slug}/`}>
+        <div class="preview" aria-hidden="true">
+          <div class="mini">
+            {preview.rows.slice(1).map((row) => row.values.map((v) => <i style={`background:${cellBg(v)}`}></i>))}
+          </div>
+        </div>
+        <div class="body">
+          <p class="meta"><span>{p.papers.length} papers</span>{p.tags.map((t) => <span>{t}</span>)}</p>
+          <h2>{p.title}</h2>
+          <p class="blurb">{p.blurb}</p>
+          <span class="go">Open project <Icon name="arrow" size={15} /></span>
+        </div>
+      </a>
+    ))}
+  </section>
+</BaseLayout>
+
+<style>
+  .page-head { padding-top: clamp(48px, 8vw, 96px); padding-bottom: 36px; }
+  .page-head h1 { font-size: clamp(56px, 10vw, 112px); margin-top: 14px; }
+  .lede { max-width: 56ch; margin: 18px 0 0; font-size: 18px; color: var(--ink-2); }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 520px), 1fr)); gap: 20px; }
+  .card {
+    display: grid;
+    grid-template-columns: 200px minmax(0, 1fr);
+    gap: 24px;
+    padding: 20px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--bg-raised);
+    text-decoration: none;
+    transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: var(--shadow); color: inherit; }
+  .preview { display: grid; place-items: center; border-radius: var(--radius-sm); background: var(--bg); border: 1px solid var(--line); padding: 18px; }
+  .mini { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; width: 100%; max-width: 150px; }
+  .mini i { aspect-ratio: 1; border-radius: 5px; transition: transform 0.25s ease; }
+  .card:hover .mini i:nth-child(6n + 1) { transform: scale(1.12); }
+  .meta { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; }
+  .meta span { font: 11.5px var(--font-mono); padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line-strong); color: var(--muted); }
+  .meta span:first-child { border-color: color-mix(in oklab, var(--accent) 45%, transparent); color: var(--accent-ink); background: var(--accent-soft); }
+  h2 { font: 500 26px/1.15 var(--font-display); letter-spacing: -0.02em; margin-top: 12px; }
+  .blurb { margin: 10px 0 0; font-size: 15px; color: var(--ink-2); }
+  .go { display: inline-flex; align-items: center; gap: 6px; margin-top: 14px; font: 500 13.5px var(--font-mono); color: var(--accent-ink); }
+
+  @media (max-width: 640px) {
+    .card { grid-template-columns: minmax(0, 1fr); }
+    .preview { padding: 16px; }
+  }
+</style>

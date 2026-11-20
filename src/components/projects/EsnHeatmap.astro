@@ -1,0 +1,244 @@
+---
+// Interactive version of the ESN paper's accuracy-change heatmaps:
+// switch emotion neurons off (deactivation) or turn them up (steering),
+// and watch the diagonal respond while random neurons stay quiet.
+import { esnPanels } from '../../data/projects/emotion-neurons';
+---
+<div class="w-card heat" data-heat>
+  <div class="w-controls">
+    <div class="w-seg" role="group" aria-label="Intervention">
+      <button type="button" data-mode="off" aria-pressed="true">Switch off</button>
+      <button type="button" data-mode="up" aria-pressed="false">Turn up</button>
+    </div>
+    <div class="w-seg" role="group" aria-label="Dataset" data-datasets></div>
+  </div>
+
+  <div class="w-range knob">
+    <div class="w-range-top">
+      <span class="w-label" data-knob-label>Share of neurons switched off</span>
+      <output data-knob-out>0.5%</output>
+    </div>
+    <input type="range" min="0" max="2" step="1" value="1" data-knob aria-label="Intervention size" />
+    <div class="w-ticks" data-ticks></div>
+  </div>
+
+  <div class="table-wrap">
+    <table data-grid>
+      <caption class="visually-hidden">Change in recognition accuracy (points) when the neurons of one emotion are changed</caption>
+      <thead></thead>
+      <tbody></tbody>
+    </table>
+    <p class="axis-y w-label" aria-hidden="true">Neurons changed ↓</p>
+  </div>
+
+  <p class="w-readout" data-readout aria-live="polite"></p>
+
+  <div class="foot">
+    <div class="w-legend"><span>worse</span><span class="ramp"></span><span>better</span></div>
+    <p class="w-note">Qwen2.5-Omni-7B · cells: change in accuracy (pts) · columns: emotion being recognized</p>
+  </div>
+
+  <script type="application/json" data-json set:html={JSON.stringify(esnPanels)} />
+</div>
+
+<script>
+  interface Panel {
+    mode: 'off' | 'up';
+    dataset: string;
+    knob: string;
+    cols: string[];
+    rows: { label: string; values: number[] }[];
+  }
+
+  const fmt = (v: number) => (v > 0 ? '+' : v < 0 ? '−' : '±') + Math.abs(v).toFixed(1);
+  const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / Math.max(xs.length, 1);
+  // Fixed colour scale per mode, so moving the slider visibly deepens the colours.
+  const SCALE = { off: 25, up: 18 } as const;
+  const DEFAULT_KNOB = { off: '0.5%', up: '0.5' } as const;
+
+  document.querySelectorAll<HTMLElement>('[data-heat]').forEach((root) => {
+    const panels: Panel[] = JSON.parse(root.querySelector('[data-json]')!.textContent!);
+    const modeBtns = root.querySelectorAll<HTMLButtonElement>('[data-mode]');
+    const dsWrap = root.querySelector<HTMLElement>('[data-datasets]')!;
+    const knob = root.querySelector<HTMLInputElement>('[data-knob]')!;
+    const knobOut = root.querySelector<HTMLOutputElement>('[data-knob-out]')!;
+    const knobLabel = root.querySelector<HTMLElement>('[data-knob-label]')!;
+    const ticks = root.querySelector<HTMLElement>('[data-ticks]')!;
+    const thead = root.querySelector('thead')!;
+    const tbody = root.querySelector('tbody')!;
+    const readout = root.querySelector<HTMLElement>('[data-readout]')!;
+
+    let mode: Panel['mode'] = 'off';
+    let dataset = 'MSP-Podcast';
+    let knobVal: string = DEFAULT_KNOB.off;
+
+    const datasetsFor = (m: string) => [...new Set(panels.filter((p) => p.mode === m).map((p) => p.dataset))];
+    const knobsFor = (m: string, d: string) => panels.filter((p) => p.mode === m && p.dataset === d).map((p) => p.knob);
+    const current = () => panels.find((p) => p.mode === mode && p.dataset === dataset && p.knob === knobVal)!;
+
+    const cellStyle = (v: number) => {
+      const t = Math.min(1, Math.abs(v) / SCALE[mode]);
+      const pct = Math.round(4 + 86 * t);
+      const hue = v < 0 ? 'var(--heat-neg)' : 'var(--heat-pos)';
+      return { bg: `color-mix(in oklab, ${hue} ${pct}%, var(--bg-raised))`, strong: pct > 52 };
+    };
+
+    const verb = () => (mode === 'off' ? 'Switching off' : 'Turning up');
+
+    const summary = (p: Panel) => {
+      const emo = p.rows.slice(1);
+      const diag = emo.map((row) => row.values[p.cols.indexOf(row.label)]);
+      const off = emo.flatMap((row) => row.values.filter((_, j) => p.cols[j] !== row.label));
+      const rnd = p.rows[0].values;
+      readout.innerHTML =
+        `Target emotion <strong>${fmt(mean(diag))}</strong> pts on average · ` +
+        `other emotions <strong>${fmt(mean(off))}</strong> · random neurons <strong>${fmt(mean(rnd))}</strong>`;
+    };
+
+    const renderControls = () => {
+      modeBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === mode)));
+      const ds = datasetsFor(mode);
+      dsWrap.innerHTML = ds
+        .map((d) => `<button type="button" data-ds="${d}" aria-pressed="${d === dataset}">${d}</button>`)
+        .join('');
+      dsWrap.hidden = ds.length < 2;
+      const ks = knobsFor(mode, dataset);
+      knob.max = String(ks.length - 1);
+      knob.value = String(ks.indexOf(knobVal));
+      knob.disabled = ks.length < 2;
+      knobOut.textContent = mode === 'off' ? knobVal : `α = ${knobVal}`;
+      knobLabel.textContent = mode === 'off' ? 'Share of neurons switched off' : 'Steering strength';
+      ticks.innerHTML = ks
+        .map((k, i) => `<button type="button" data-k="${i}" aria-current="${k === knobVal}">${mode === 'off' ? k : 'α ' + k}</button>`)
+        .join('');
+      root.querySelector('.knob')!.classList.toggle('single', ks.length < 2);
+    };
+
+    const renderGrid = (rebuild: boolean) => {
+      const p = current();
+      if (rebuild) {
+        thead.innerHTML =
+          `<tr><th></th>${p.cols.map((c) => `<th scope="col"><span>${c}</span></th>`).join('')}</tr>`;
+        tbody.innerHTML = p.rows
+          .map((row, i) =>
+            `<tr class="${i === 0 ? 'rnd' : ''}"><th scope="row">${i === 0 ? 'Random' : row.label}</th>` +
+            row.values.map((_, j) => `<td data-r="${i}" data-c="${j}" class="${p.cols[j] === row.label ? 'diag' : ''}"><span></span></td>`).join('') +
+            `</tr>` + (i === 0 ? `<tr class="sp" aria-hidden="true"><th></th><td colspan="${p.cols.length}"></td></tr>` : ''))
+          .join('');
+      }
+      p.rows.forEach((row, i) => row.values.forEach((v, j) => {
+        const td = tbody.querySelector<HTMLElement>(`td[data-r="${i}"][data-c="${j}"]`)!;
+        const s = cellStyle(v);
+        td.style.background = s.bg;
+        td.classList.toggle('strong', s.strong);
+        td.querySelector('span')!.textContent = fmt(v);
+      }));
+      summary(p);
+    };
+
+    let lastShape = '';
+    const render = () => {
+      renderControls();
+      const p = current();
+      const shape = p.cols.join() + p.rows.map((r) => r.label).join();
+      renderGrid(shape !== lastShape);
+      lastShape = shape;
+    };
+
+    modeBtns.forEach((b) => b.addEventListener('click', () => {
+      mode = b.dataset.mode as Panel['mode'];
+      const ds = datasetsFor(mode);
+      dataset = ds.reduce((best, d) => (knobsFor(mode, d).length > knobsFor(mode, best).length ? d : best), ds[0]);
+      knobVal = DEFAULT_KNOB[mode];
+      render();
+    }));
+    dsWrap.addEventListener('click', (e) => {
+      const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-ds]');
+      if (!b) return;
+      dataset = b.dataset.ds!;
+      const ks = knobsFor(mode, dataset);
+      if (!ks.includes(knobVal)) knobVal = ks.includes(DEFAULT_KNOB[mode]) ? DEFAULT_KNOB[mode] : ks[0];
+      render();
+    });
+    knob.addEventListener('input', () => {
+      knobVal = knobsFor(mode, dataset)[Number(knob.value)];
+      render();
+    });
+    ticks.addEventListener('click', (e) => {
+      const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-k]');
+      if (!b) return;
+      knobVal = knobsFor(mode, dataset)[Number(b.dataset.k)];
+      render();
+    });
+
+    // Hovering a cell explains it in words.
+    tbody.addEventListener('pointerover', (e) => {
+      const td = (e.target as HTMLElement).closest<HTMLElement>('td[data-r]');
+      if (!td) return;
+      const p = current();
+      const i = Number(td.dataset.r), j = Number(td.dataset.c);
+      const who = i === 0 ? 'random neurons' : `${p.rows[i].label} neurons`;
+      readout.innerHTML = `${verb()} <strong>${who}</strong>: ${p.cols[j]} recognition <strong>${fmt(p.rows[i].values[j])}</strong> pts`;
+      tbody.querySelectorAll('.hl').forEach((x) => x.classList.remove('hl'));
+      td.parentElement!.classList.add('hl');
+    });
+    tbody.addEventListener('pointerleave', () => {
+      tbody.querySelectorAll('.hl').forEach((x) => x.classList.remove('hl'));
+      summary(current());
+    });
+
+    render();
+  });
+</script>
+
+<style>
+  .heat { display: grid; gap: 18px; }
+  .knob.single input { display: none; }
+  .knob.single .w-ticks { display: none; }
+
+  .table-wrap { position: relative; min-width: 0; }
+  table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 4px;
+    table-layout: fixed;
+    font-family: var(--font-mono);
+  }
+  /* Rows and cells are built in the browser, so they need :global() to get these styles. */
+  table :global(th) {
+    font: 500 12.5px var(--font-sans);
+    color: var(--ink-2);
+  }
+  table :global(thead th) { padding-bottom: 4px; text-align: center; vertical-align: bottom; }
+  table :global(thead th:first-child) { width: 24%; }
+  table :global(tbody th) { text-align: right; padding-right: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  table :global(td) {
+    height: 46px;
+    border-radius: 8px;
+    text-align: center;
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+    transition: background-color 0.35s ease, box-shadow 0.15s ease;
+    cursor: default;
+  }
+  table :global(td.strong) { color: #fff; }
+  table :global(td.diag) { box-shadow: inset 0 0 0 1.5px color-mix(in oklab, var(--ink) 55%, transparent); font-weight: 600; }
+  table :global(tr.rnd td) { height: 36px; font-size: 13px; }
+  table :global(tr.rnd th) { color: var(--muted); font-style: italic; }
+  table :global(tr.sp td) { height: 6px; background: none; }
+  table :global(tr.hl th) { color: var(--accent-ink); }
+  table :global(td[data-r]:hover) { box-shadow: inset 0 0 0 2px var(--accent); }
+
+  .axis-y { position: absolute; left: 0; top: 4px; margin: 0; font-size: 10.5px; }
+
+  .foot { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 18px; }
+
+  @media (max-width: 560px) {
+    table :global(thead th span) { display: inline-block; font-size: 11px; writing-mode: vertical-rl; transform: rotate(180deg); }
+    table :global(td) { height: 40px; font-size: 12.5px; }
+    table :global(tbody th) { font-size: 11.5px; padding-right: 4px; }
+    table { border-spacing: 3px; }
+    .axis-y { display: none; }
+  }
+</style>

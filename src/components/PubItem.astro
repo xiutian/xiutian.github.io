@@ -42,6 +42,9 @@ const search = [pub.title, pub.venue, pub.venueFull, ...pub.authors.map((a) => a
           <button class="chip" type="button" data-toggle="abstract" aria-expanded="false" aria-controls={`abs-${pub.key}`}>Abstract</button>
         )}
         <button class="chip" type="button" data-toggle="bibtex" aria-expanded="false" aria-controls={`bib-${pub.key}`}>BibTeX</button>
+        {pub.project && !Astro.url.pathname.startsWith(`/projects/${pub.project.slug}`) && (
+          <a class="chip project" href={`/projects/${pub.project.slug}/`}>Project: {pub.project.short} <Icon name="arrow" size={13} /></a>
+        )}
       </div>
     )}
     {!compact && pub.abstract && (
@@ -102,6 +105,11 @@ const search = [pub.title, pub.venue, pub.venueFull, ...pub.authors.map((a) => a
   }
   .chip:hover { border-color: var(--accent); color: var(--accent-ink); }
   .chip[aria-expanded='true'] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .chip.project {
+    border-color: color-mix(in oklab, var(--accent) 45%, transparent);
+    background: var(--accent-soft);
+    color: var(--accent-ink);
+  }
 
   .pub-panel {
     margin-top: 14px;
