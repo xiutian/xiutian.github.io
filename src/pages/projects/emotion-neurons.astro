@@ -1,0 +1,254 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import EsnHeatmap from '../../components/projects/EsnHeatmap.astro';
+import EmotionKnob from '../../components/projects/EmotionKnob.astro';
+import LanguagePool from '../../components/projects/LanguagePool.astro';
+import FaceVoice from '../../components/projects/FaceVoice.astro';
+import Icon from '../../components/Icon.astro';
+import { getPublications } from '../../lib/bibtex';
+import { projects } from '../../data/projects';
+import '../../styles/project.css';
+
+const project = projects.find((p) => p.slug === 'emotion-neurons')!;
+const all = getPublications();
+const pub = (key: string) => all.find((p) => p.key === key)!;
+const [esn, evc, mlen, faces] = project.papers.map(pub);
+
+const chapters = [
+  { id: 'hear', n: '01', verb: 'Hear it', q: 'Do LALMs have emotion neurons?', pub: esn, badge: true },
+  { id: 'speak', n: '02', verb: 'Speak it', q: 'Can they make a model speak with emotion?', pub: evc, badge: true },
+  { id: 'languages', n: '03', verb: 'Across languages', q: 'Do they work in every language?', pub: mlen, badge: false },
+  { id: 'faces', n: '04', verb: 'Across senses', q: 'Do the same neurons see emotion in faces?', pub: faces, badge: false },
+];
+
+// A small field of "neurons" for the hub card; a few light up in emotion colours.
+const DOTS = 84;
+const lit: Record<number, string> = { 9: 'angry', 23: 'happy', 38: 'sad', 52: 'surprise', 67: 'angry', 74: 'happy', 15: 'sad', 61: 'surprise' };
+const link = (p: (typeof all)[number]) => p.url ?? p.arxiv;
+---
+<BaseLayout
+  title={project.short}
+  description="Emotion-sensitive neurons in large audio-language models: switch them off, turn them up, make the model speak with them, and follow them across languages and into faces."
+>
+  <section class="container p-hero">
+    <a class="back" href="/projects/"><Icon name="arrow" size={14} /> Projects</a>
+    <p class="eyebrow">Project · {project.papers.length} papers · 2026</p>
+    <h1 class="display">Emotion neurons in audio&#8209;language models</h1>
+    <p class="lede">
+      Emotion concepts have been found inside text LLMs. Here we ask the same about speech:
+      where does emotion live when a <em>large audio-language model</em> (LALM) listens, and what happens if we change it?
+    </p>
+  </section>
+
+  <nav class="container map" aria-label="Papers in this project">
+    <a class="node hub" href={`#${chapters[0].id}`}>
+      <span class="field" aria-hidden="true">
+        {Array.from({ length: DOTS }, (_, i) => <i class={lit[i] ? `on ${lit[i]}` : undefined} style={lit[i] ? `animation-delay:${(i % 8) * 0.45}s` : undefined}></i>)}
+      </span>
+      <span class="n">{chapters[0].n}</span>
+      <span class="verb">{chapters[0].verb}</span>
+      <span class="q">{chapters[0].q}</span>
+      <span class="badge accent">{esn.venue}</span>
+    </a>
+    <div class="branches">
+      {chapters.slice(1).map((c) => (
+        <a class="node" href={`#${c.id}`}>
+          <span class="n">{c.n}</span>
+          <span class="verb">{c.verb}</span>
+          <span class="q">{c.q}</span>
+          {c.badge && <span class="badge">{c.pub.venue}</span>}
+        </a>
+      ))}
+    </div>
+  </nav>
+
+  <section class="container stats" aria-label="In numbers">
+    <div><strong>0.5%</strong><span>of neurons per emotion is enough</span></div>
+    <div><strong>5</strong><span>open models, 4 of them LALMs</span></div>
+    <div><strong>12</strong><span>languages tested</span></div>
+    <div><strong>0</strong><span>training needed: steering happens at inference</span></div>
+  </section>
+
+  {chapters.map((c) => (
+    <section class="container chapter" id={c.id} data-reveal>
+      <header class="ch-head">
+        <span class="ch-n display">{c.n}</span>
+        <div>
+          <p class="eyebrow">{c.verb}{c.badge && <span class="badge accent">{c.pub.venue}</span>}</p>
+          <h2 class="display">{c.q}</h2>
+          {c.id === 'hear' && (
+            <p class="answer">Yes. Switch off about 0.5% of neurons and the model loses one emotion while the others barely move. Turn the same neurons up and it hears that emotion more. Random neurons do little.</p>
+          )}
+          {c.id === 'speak' && (
+            <p class="answer">Yes, without training. Turning up emotion neurons in the language backbone while the model converts speech makes the voice more emotional. Push too hard and the words start to change.</p>
+          )}
+          {c.id === 'languages' && (
+            <p class="answer">Neurons found in one language barely overlap with another's. Pooling the evidence from eight languages finds neurons that still control emotion in four languages never used to find them.</p>
+          )}
+          {c.id === 'faces' && (
+            <p class="answer">Partly. In three models that take both speech and images, neurons found from voices and from faces overlap most for the same emotion, and changing one set shifts recognition in the other modality.</p>
+          )}
+        </div>
+      </header>
+
+      <div class="ch-body">
+        {c.id === 'hear' && <EsnHeatmap />}
+        {c.id === 'speak' && <EmotionKnob />}
+        {c.id === 'languages' && <LanguagePool />}
+        {c.id === 'faces' && <FaceVoice />}
+      </div>
+
+      <p class="ch-paper">
+        <span class="w-label">Paper</span>
+        {link(c.pub)
+          ? <a href={link(c.pub)} target="_blank" rel="noopener">{c.pub.title} <Icon name="external" size={13} /></a>
+          : <span>{c.pub.title}</span>}
+      </p>
+    </section>
+  ))}
+
+</BaseLayout>
+
+
+<style>
+  .p-hero { padding-top: clamp(40px, 7vw, 80px); }
+  .back {
+    display: inline-flex; align-items: center; gap: 6px;
+    font: 13px var(--font-mono); color: var(--muted); text-decoration: none;
+  }
+  .back :global(svg) { transform: rotate(180deg); }
+  .back:hover { color: var(--accent-ink); }
+  .p-hero .eyebrow { margin: 28px 0 0; }
+  .p-hero h1 { font-size: clamp(40px, 7.4vw, 84px); margin-top: 14px; max-width: 14ch; }
+  .lede { max-width: 60ch; margin: 22px 0 0; font-size: 18.5px; color: var(--ink-2); }
+  .lede em { font-style: normal; color: var(--ink); font-weight: 600; }
+
+  /* Paper map: one hub, three branches */
+  .map {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    gap: 0 44px;
+    margin-top: 48px;
+    position: relative;
+  }
+  .node {
+    position: relative;
+    display: grid;
+    align-content: start;
+    gap: 4px;
+    padding: 18px 20px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--bg-raised);
+    text-decoration: none;
+    transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .node:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: var(--shadow); color: inherit; }
+  .node .n { font: 12px var(--font-mono); color: var(--muted); }
+  .node .verb { font: 500 22px/1.15 var(--font-display); letter-spacing: -0.02em; color: var(--ink); }
+  .node .q { font-size: 14.5px; color: var(--ink-2); }
+  .node .badge { justify-self: start; margin-top: 6px; }
+  .hub { padding: 24px; align-content: end; min-height: 100%; overflow: hidden; }
+  .hub .verb { font-size: 32px; }
+  .hub::after {
+    content: '';
+    position: absolute;
+    right: -45px;
+    top: 50%;
+    width: 44px;
+    border-top: 1.5px dashed var(--line-strong);
+  }
+  .field {
+    display: grid;
+    grid-template-columns: repeat(14, 1fr);
+    gap: 9px;
+    margin-bottom: 18px;
+  }
+  .field i {
+    aspect-ratio: 1;
+    border-radius: 99px;
+    background: var(--line-strong);
+    opacity: 0.55;
+  }
+  .field i.on { animation: fire 3.6s ease-in-out infinite; }
+  .field i.angry { --c: var(--emo-angry); }
+  .field i.happy { --c: var(--emo-happy); }
+  .field i.sad { --c: var(--emo-sad); }
+  .field i.surprise { --c: var(--emo-surprise); }
+  @keyframes fire {
+    0%, 70%, 100% { background: var(--line-strong); opacity: 0.55; transform: scale(1); }
+    15%, 45% { background: var(--c); opacity: 1; transform: scale(1.35); }
+  }
+
+  .branches {
+    position: relative;
+    display: grid;
+    gap: 12px;
+  }
+  .branches::before {
+    content: '';
+    position: absolute;
+    left: -22px;
+    top: 34px;
+    bottom: 34px;
+    border-left: 1.5px dashed var(--line-strong);
+  }
+  .branches .node::before {
+    content: '';
+    position: absolute;
+    left: -23px;
+    top: 50%;
+    width: 22px;
+    border-top: 1.5px dashed var(--line-strong);
+  }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+    margin-top: 36px;
+  }
+  .stats div { display: grid; gap: 2px; padding-top: 14px; border-top: 1px solid var(--line); }
+  .stats strong { font: 500 clamp(30px, 4vw, 42px)/1 var(--font-display); letter-spacing: -0.03em; color: var(--accent-ink); }
+  .stats span { font-size: 14px; color: var(--muted); }
+
+  /* Chapters */
+  .chapter { margin-top: clamp(72px, 10vw, 120px); scroll-margin-top: 80px; }
+  .ch-head {
+    display: grid;
+    grid-template-columns: 88px minmax(0, 1fr);
+    gap: 8px 24px;
+    margin-bottom: 26px;
+  }
+  .ch-n { font-size: 64px; color: var(--line-strong); }
+  .ch-head .eyebrow { margin: 4px 0 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .ch-head h2 { font-size: clamp(30px, 4.4vw, 48px); margin-top: 10px; letter-spacing: -0.03em; }
+  .answer { max-width: 62ch; margin: 14px 0 0; font-size: 17px; color: var(--ink-2); }
+  .ch-paper {
+    display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: baseline;
+    margin: 16px 0 0; font-size: 14.5px; color: var(--ink-2);
+  }
+  .ch-paper a { text-decoration-color: color-mix(in oklab, var(--accent) 40%, transparent); }
+  .ch-paper :global(svg) { display: inline; vertical-align: -1px; }
+
+
+  @media (max-width: 860px) {
+    .map { grid-template-columns: minmax(0, 1fr); gap: 0; }
+    .hub::after { right: auto; left: 32px; top: auto; bottom: -25px; width: 0; height: 24px; border-top: 0; border-left: 1.5px dashed var(--line-strong); }
+    .branches { margin-top: 24px; padding-left: 32px; }
+    .branches::before { left: 32px; top: -24px; bottom: 34px; }
+    .branches .node { margin-left: 22px; }
+    .branches .node::before { left: -23px; }
+    .field { grid-template-columns: repeat(21, 1fr); gap: 6px; }
+    .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .ch-head { grid-template-columns: minmax(0, 1fr); }
+    .ch-n { font-size: 40px; }
+  }
+  @media (max-width: 560px) {
+    .branches { padding-left: 0; }
+    .branches::before { left: 12px; }
+    .hub::after { left: 12px; }
+    .branches .node { margin-left: 28px; }
+    .branches .node::before { left: -17px; width: 16px; }
+  }
+</style>

@@ -4,6 +4,7 @@
 import bibSource from '../data/papers.bib?raw';
 import { pubExtras, type PubExtra } from '../data/publications';
 import { site } from '../data/site';
+import { projectFor } from '../data/projects';
 
 export interface Author {
   name: string;
@@ -21,6 +22,8 @@ export interface Publication {
   note?: string;
   selected: boolean;
   visual?: PubExtra["visual"];
+  /** Project page this paper belongs to, if any. */
+  project?: { slug: string; short: string };
   firstAuthor: boolean;
   abstract?: string;
   url?: string;
@@ -240,6 +243,7 @@ export function getPublications(): Publication[] {
       const authors = parseAuthors(f.author ?? '');
       const year = Number.parseInt(f.year ?? '0', 10);
       const venueFull = deriveVenue(f);
+      const proj = projectFor(e.key);
       return {
         key: e.key,
         type: e.type,
@@ -251,6 +255,7 @@ export function getPublications(): Publication[] {
         note: extra.note ?? venueNote(venueFull),
         selected: Boolean(extra.selected),
         visual: extra.visual,
+        project: proj ? { slug: proj.slug, short: proj.short } : undefined,
         firstAuthor: authors[0]?.self ?? false,
         abstract: f.abstract ? cleanLatex(f.abstract) : undefined,
         url: f.url?.trim(),

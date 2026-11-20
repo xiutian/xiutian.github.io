@@ -1,0 +1,226 @@
+---
+// MLEN: pool emotion evidence from more languages and watch the neurons
+// control emotion more selectively in four languages never used to find them.
+import { mlenLanguages, mlenPool, mlenPoolK, mlenRandomBand, mlenOverlap } from '../../data/projects/emotion-neurons';
+
+const data = { pool: mlenPool, ks: mlenPoolK, band: mlenRandomBand };
+const models = Object.keys(mlenPool);
+const ov = mlenOverlap;
+const OV_MAX = 0.25;
+---
+<div class="w-card pool" data-pool data-mode="off">
+  <div class="langs">
+    <div>
+      <p class="w-label">Neurons found from</p>
+      <ul class="chips found">
+        {mlenLanguages.identify.map((l) => <li title={l.corpus}>{l.name}</li>)}
+      </ul>
+    </div>
+    <div class="arrow" aria-hidden="true">→</div>
+    <div>
+      <p class="w-label">Tested on, never seen</p>
+      <ul class="chips held">
+        {mlenLanguages.heldOut.map((l) => <li title={l.corpus}>{l.name}</li>)}
+      </ul>
+    </div>
+  </div>
+
+  <div class="w-controls">
+    <div class="w-seg" role="group" aria-label="Intervention">
+      <button type="button" data-mode="off" aria-pressed="true">Switch off</button>
+      <button type="button" data-mode="up" aria-pressed="false">Turn up</button>
+    </div>
+  </div>
+
+  <div class="w-range">
+    <div class="w-range-top">
+      <span class="w-label">Languages pooled</span>
+      <span class="dots" data-dots aria-hidden="true">{Array.from({ length: 8 }, () => <i></i>)}</span>
+      <output data-k-out>1 of 8</output>
+    </div>
+    <input type="range" min="0" max={mlenPoolK.length - 1} step="1" value="0" data-k aria-label="Number of languages pooled" />
+    <div class="w-ticks">{mlenPoolK.map((k, i) => <button type="button" data-ki={i}>{k}</button>)}</div>
+  </div>
+
+  <div class="chart" data-chart>
+    {models.map((m) => (
+      <div class="row" data-model={m}>
+        <span class="m-name">{m}</span>
+        <span class="track">
+          <span class="band" title="Random neurons of the same size stay inside this zone"></span>
+          <span class="range"></span>
+          <span class="fill"></span>
+        </span>
+        <output class="val"></output>
+      </div>
+    ))}
+    <div class="row axis" aria-hidden="true">
+      <span></span>
+      <span class="ticks" data-axis></span>
+      <span></span>
+    </div>
+  </div>
+
+  <p class="w-readout" data-readout aria-live="polite"></p>
+  <p class="w-note">Bar: selectivity on French, German, Persian and Russian, i.e. how much more the target emotion changes than the others (pp). Line: range across pools. Shaded: where random neurons land. At 1, each language is used alone.</p>
+
+  <div class="overlap">
+    <p class="w-label">Why one language is not enough</p>
+    <div class="ov-row">
+      <span>Two halves of one corpus</span>
+      <span class="ov-track"><i style={`left:${(ov.sameCorpus[0] / OV_MAX) * 100}%; width:${((ov.sameCorpus[1] - ov.sameCorpus[0]) / OV_MAX) * 100}%`}></i></span>
+      <output>{ov.sameCorpus[0].toFixed(2)}–{ov.sameCorpus[1].toFixed(2)}</output>
+    </div>
+    <div class="ov-row">
+      <span>Two different languages</span>
+      <span class="ov-track"><i class="weak" style={`left:${(ov.otherLanguage[0] / OV_MAX) * 100}%; width:${((ov.otherLanguage[1] - ov.otherLanguage[0]) / OV_MAX) * 100}%`}></i></span>
+      <output>{ov.otherLanguage[0].toFixed(2)}–{ov.otherLanguage[1].toFixed(2)}</output>
+    </div>
+    <p class="w-note">Share of neurons in common (Jaccard), range across the four LALMs. Neuron sets from different languages share 3–6× fewer units.</p>
+  </div>
+
+  <script type="application/json" data-json set:html={JSON.stringify(data)} />
+</div>
+
+<script>
+  interface Data {
+    pool: Record<string, { off: [number, number, number][]; up: [number, number, number][] }>;
+    ks: number[];
+    band: [number, number];
+  }
+  const MAX = { off: 20, up: 8 } as const;
+  const fmt = (v: number) => (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(2);
+
+  document.querySelectorAll<HTMLElement>('[data-pool]').forEach((root) => {
+    const data: Data = JSON.parse(root.querySelector('[data-json]')!.textContent!);
+    const slider = root.querySelector<HTMLInputElement>('[data-k]')!;
+    const modeBtns = root.querySelectorAll<HTMLButtonElement>('[data-mode]');
+    const tickBtns = root.querySelectorAll<HTMLButtonElement>('[data-ki]');
+    const readout = root.querySelector<HTMLElement>('[data-readout]')!;
+    let mode: 'off' | 'up' = 'off';
+    let ki = 0;
+
+    const render = () => {
+      const k = data.ks[ki];
+      const max = MAX[mode];
+      root.dataset.mode = mode;
+      modeBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === mode)));
+      tickBtns.forEach((b, i) => b.setAttribute('aria-current', String(i === ki)));
+      slider.value = String(ki);
+      root.querySelector('[data-k-out]')!.textContent = `${k} of 8`;
+      root.querySelectorAll('[data-dots] i').forEach((d, i) => d.classList.toggle('on', i < k));
+      root.querySelector('[data-axis]')!.innerHTML = Array.from({ length: 5 }, (_, i) =>
+        `<span style="left:${i * 25}%">${((max * i) / 4).toFixed(0)}</span>`).join('');
+
+      let gains: number[] = [];
+      root.querySelectorAll<HTMLElement>('[data-model]').forEach((row) => {
+        const series = data.pool[row.dataset.model!][mode];
+        const [m, lo, hi] = series[ki];
+        // Size of the effect in the intended direction (a set that pushes the wrong way counts as 0).
+        const dirOf = (v: number) => Math.max(0, mode === 'off' ? -v : v);
+        const a = dirOf(m), aLo = Math.min(dirOf(lo), dirOf(hi)), aHi = Math.max(dirOf(lo), dirOf(hi));
+        const pct = (x: number) => `${Math.min(100, (x / max) * 100)}%`;
+        row.querySelector<HTMLElement>('.fill')!.style.width = pct(a);
+        const rg = row.querySelector<HTMLElement>('.range')!;
+        rg.style.left = pct(aLo);
+        rg.style.width = `calc(${pct(aHi)} - ${pct(aLo)})`;
+        rg.hidden = aHi - aLo < 0.01;
+        row.querySelector<HTMLElement>('.band')!.style.width = pct(data.band[1]);
+        row.querySelector('.val')!.textContent = `${fmt(m)} pp`;
+        gains.push(Math.abs(series[ki][0]) / Math.max(Math.abs(series[0][0]), 0.01));
+      });
+      const avg = gains.reduce((x, y) => x + y, 0) / gains.length;
+      readout.innerHTML = k === 1
+        ? `One language at a time: effects vary a lot depending on which language you pick.`
+        : k === 8
+          ? `All <strong>8</strong> languages pooled: about <strong>${avg.toFixed(1)}×</strong> the average single-language effect.`
+          : `Pooling <strong>${k}</strong> languages: about <strong>${avg.toFixed(1)}×</strong> the average single-language effect, with less spread between pools.`;
+    };
+
+    modeBtns.forEach((b) => b.addEventListener('click', () => { mode = b.dataset.mode as 'off' | 'up'; render(); }));
+    slider.addEventListener('input', () => { ki = Number(slider.value); render(); });
+    tickBtns.forEach((b) => b.addEventListener('click', () => { ki = Number(b.dataset.ki); render(); }));
+    render();
+  });
+</script>
+
+<style>
+  /* Switch off = cobalt, turn up = orange, everywhere in this widget. */
+  .pool { display: grid; gap: 20px; --mode: var(--heat-neg); }
+  .pool[data-mode='up'] { --mode: var(--heat-pos); }
+  .pool button[data-mode='off'][aria-pressed='true'] { background: var(--heat-neg); color: #fff; }
+  .pool button[data-mode='up'][aria-pressed='true'] { background: var(--heat-pos); color: #fff; }
+  .pool input[type='range'] { accent-color: var(--mode); }
+  .pool .w-range output { color: var(--mode); }
+  .langs { display: grid; grid-template-columns: minmax(0, 2fr) auto minmax(0, 1fr); gap: 14px; align-items: center; }
+  .langs .w-label { margin: 0 0 8px; }
+  .arrow { font-size: 22px; color: var(--muted); padding-top: 18px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+  .chips li {
+    font-size: 13.5px;
+    padding: 4px 11px;
+    border-radius: 999px;
+    border: 1px solid var(--line-strong);
+    color: var(--ink-2);
+  }
+  .chips.held li {
+    border-style: dashed;
+    border-color: var(--ink-2);
+    color: var(--ink);
+    background: transparent;
+  }
+
+  .dots { display: inline-flex; gap: 5px; margin-left: auto; margin-right: 12px; }
+  .dots i { width: 9px; height: 9px; border-radius: 99px; border: 1.5px solid var(--line-strong); transition: all 0.2s; }
+  .dots i.on { background: var(--mode); border-color: var(--mode); }
+
+  .chart { display: grid; gap: 10px; }
+  .row { display: grid; grid-template-columns: 132px minmax(0, 1fr) 84px; gap: 12px; align-items: center; }
+  .m-name { font-size: 14px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .track { position: relative; height: 22px; border-radius: 6px; background: var(--bg); border: 1px solid var(--line); overflow: hidden; }
+  .band {
+    position: absolute; inset: 0 auto 0 0;
+    background: repeating-linear-gradient(135deg, var(--line) 0 4px, transparent 4px 8px);
+    border-right: 1px dashed var(--line-strong);
+  }
+  .fill {
+    position: absolute; left: 0; top: 4px; bottom: 4px;
+    border-radius: 0 4px 4px 0;
+    background: var(--mode);
+    transition: background-color 0.3s ease, width 0.5s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  .range {
+    position: absolute; top: 50%; height: 2px; margin-top: -1px;
+    background: var(--ink);
+    opacity: 0.7;
+    z-index: 1;
+    transition: left 0.5s cubic-bezier(0.2, 0.7, 0.2, 1), width 0.5s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  .range::before, .range::after { content: ''; position: absolute; top: -5px; width: 2px; height: 12px; background: inherit; }
+  .range::before { left: 0; }
+  .range::after { right: 0; }
+  .val { font: 600 13.5px var(--font-mono); color: var(--ink); text-align: right; }
+  .axis .ticks { position: relative; height: 16px; font: 11px var(--font-mono); color: var(--muted); }
+  .axis .ticks :global(span) { position: absolute; transform: translateX(-50%); }
+  .axis .ticks :global(span:first-child) { transform: none; }
+  .axis .ticks :global(span:last-child) { transform: translateX(-100%); }
+
+  .overlap { display: grid; gap: 8px; padding-top: 18px; border-top: 1px solid var(--line); }
+  .overlap .w-label { margin: 0; }
+  .ov-row { display: grid; grid-template-columns: 190px minmax(0, 1fr) 84px; gap: 12px; align-items: center; font-size: 14px; color: var(--ink-2); }
+  .ov-track { position: relative; height: 12px; border-radius: 99px; background: var(--line); }
+  .ov-track i { position: absolute; top: 0; bottom: 0; border-radius: 99px; background: var(--ink-2); }
+  .ov-track i.weak { background: var(--muted); }
+  .ov-row output { font: 600 13px var(--font-mono); color: var(--ink); text-align: right; }
+
+  @media (max-width: 640px) {
+    .langs { grid-template-columns: minmax(0, 1fr); }
+    .arrow { transform: rotate(90deg); padding: 0; justify-self: start; }
+    .row { grid-template-columns: 96px minmax(0, 1fr) 70px; gap: 8px; }
+    .m-name { font-size: 12.5px; white-space: normal; line-height: 1.25; }
+    .val { font-size: 12px; }
+    .ov-row { grid-template-columns: minmax(0, 1fr) 76px; }
+    .ov-row .ov-track { grid-column: 1 / -1; grid-row: 2; }
+    .dots { display: none; }
+  }
+</style>
